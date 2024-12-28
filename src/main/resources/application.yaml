@@ -1,0 +1,70 @@
+logging:
+  level:
+    root: DEBUG
+
+spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          azure:
+            issuer-uri: https://login.microsoftonline.com/c1a88ecc-d660-4e4d-9d6c-7ca085265dca/v2.0
+            user-name-attribute: email
+        registration:
+          entraid-dev:
+            provider: azure
+            client-id: "76f07370-7081-4bc6-8246-e5817be91e29"
+            client-secret: ${client-secret}
+            scope:
+            - openid
+            - email
+            - profile
+            admin_role_id: "24469a49-cfbb-4095-95f6-9d97f6e69cce"
+            
+database:
+  username: theear
+  password: theear
+  
+wicket:
+  core:
+    settings:
+      general:
+        configuration-type: development
+      debug:
+        enabled: true
+        component-use-check: true
+        development-utilities-enabled: true
+      markup:
+        strip-wicket-tags: false
+  stuff:
+    htmlcompressor:
+      enabled: false
+      features:
+        removeComments: false
+        removeMultiSpaces: false
+        removeIntertagSpaces: false
+        removeQuotes: false
+        compressJavaScript: false
+        compressCss: false
+        simpleDoctype: false
+        removeScriptAttributes: false
+        removeStyleAttributes: false
+        removeLinkAttributes: false
+        removeFormAttributes: false
+        removeInputAttributes: false
+        simpleBooleanAttributes: false
+        removeJavaScriptProtocol: false
+        removeHttpProtocol: false
+        removeHttpsProtocol: false
+        preserveLineBreaks: false
+  external:
+    development:
+      devutils:
+        statelesschecker:
+          enabled: true
+        interceptor:
+          enable-live-sessions-page: true
+        diskstorebrowser:
+          enabled: true
+      wicketsource:
+        enabled: true

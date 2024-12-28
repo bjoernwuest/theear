@@ -1,0 +1,92 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+<!--
+  <parent>
+    <groupId>com.giffing.wicket.spring.boot.starter</groupId>
+    <artifactId>wicket-spring-boot-starter-parent</artifactId>
+    <version>4.0.0</version>
+  </parent>
+-->
+  <groupId>software.theear</groupId>
+  <artifactId>theear</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>The Enterprise Architecture Repository</name>
+  
+  <properties>
+    <maven.compiler.target>21</maven.compiler.target>
+    <maven.compiler.source>21</maven.compiler.source>
+    <version.spring-boot>3.3.6</version.spring-boot>
+    <version.wicket>10.0.0</version.wicket>
+    <version.wicket-spring-boot-starter>4.0.0</version.wicket-spring-boot-starter>
+    <version.postgresql>42.7.4</version.postgresql>
+    <version.hikaricp>6.2.1</version.hikaricp>
+    <version.slf4j>2.0.16</version.slf4j>
+    <version.google.guava>33.4.0-jre</version.google.guava>
+    
+    <version.spring-boot-starter-oauth2-client>${version.spring-boot}</version.spring-boot-starter-oauth2-client>
+    <version.spring-boot-starter-web>${version.spring-boot}</version.spring-boot-starter-web>
+    <version.spring-boot-validation>${version.spring-boot}</version.spring-boot-validation>
+    
+  </properties>
+  
+  <dependencies>
+    <!-- SPRING BOOT DEPENDENCIES, i.e. oauth and validation -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+      <version>${version.spring-boot-starter-web}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-client</artifactId>
+      <version>${version.spring-boot-starter-oauth2-client}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+      <version>${version.spring-boot-validation}</version>
+    </dependency>
+    
+    <!-- WICKET-SPRING-BOOT DEPENDENCY -->
+    <dependency>
+      <groupId>com.giffing.wicket.spring.boot.starter</groupId>
+      <artifactId>wicket-spring-boot-starter</artifactId>
+      <version>${version.wicket-spring-boot-starter}</version>
+    </dependency>
+    <!-- Additional wicket dependencies -->
+    <dependency>
+      <groupId>org.wicketstuff</groupId>
+      <artifactId>wicketstuff-restannotations</artifactId>
+      <version>${version.wicket}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.wicketstuff</groupId>
+      <artifactId>wicketstuff-restannotations-json</artifactId>
+      <version>${version.wicket}</version>
+    </dependency>
+    
+    <!-- DATABASE DEPENDENCIES -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>${version.postgresql}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.zaxxer</groupId>
+      <artifactId>HikariCP</artifactId>
+      <version>${version.hikaricp}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${version.slf4j}</version>
+    </dependency>
+    
+    <!-- Google Guava helper -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${version.google.guava}</version>
+    </dependency>
+  </dependencies>
+</project>
