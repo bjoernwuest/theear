@@ -52,13 +52,13 @@ import software.theear.auth.RequiredPermissions;
    */
   protected final Optional<CNamedOidcUser> p_GetSessionUser() {
 	WebRequest wr = super.getCurrentWebRequest();
-	if (null != wr) {
-      Object cr = wr.getContainerRequest();
-      if ((cr instanceof HttpServletRequest hsr) 
-          && (hsr.getUserPrincipal() instanceof OAuth2AuthenticationToken at) 
-          && (at.getPrincipal() instanceof CNamedOidcUser namedUser))
-          { return Optional.of(namedUser); }
-	}
+  	if (null != wr) {
+        Object cr = wr.getContainerRequest();
+        if ((cr instanceof HttpServletRequest hsr) 
+            && (hsr.getUserPrincipal() instanceof OAuth2AuthenticationToken at) 
+            && (at.getPrincipal() instanceof CNamedOidcUser namedUser))
+            { return Optional.of(namedUser); }
+  	}
     return Optional.empty();
   }
 

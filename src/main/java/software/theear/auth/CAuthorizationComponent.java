@@ -54,7 +54,9 @@ import software.theear.data.CDatabaseService;
 	 */
 	@Bean(name = "authenticationManager") AuthenticationManager authManager() {
 		return new AuthenticationManager() {
-			@Override public Authentication authenticate(Authentication authentication) throws AuthenticationException { return authentication; }
+			@Override public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+			  return authentication;
+			}
 		};
 	}
 
@@ -107,7 +109,7 @@ import software.theear.data.CDatabaseService;
     return new SimpleGrantedAuthority(Groupname);
   }
   
-  private void x(FunctionalPermissions Perm, String MethodName, String ClassName) throws SQLException {
+  @Deprecated private void m_WriteFunctionalPermissionToDatabase(FunctionalPermissions Perm, String MethodName, String ClassName) throws SQLException {
     log.debug("Persist permission '{}' on '{}' from type '{}'.", Perm, MethodName, ClassName);
     try (Connection conn = this.m_DBService.getConnection(); PreparedStatement pStmt = conn.prepareStatement("INSERT INTO auth_functional_permissions (perm_name, perm_description) VALUES (?, ?) ON CONFLICT (perm_name) DO UPDATE SET perm_description = ?, last_seen_at = now() RETURNING perm_id"); PreparedStatement pStmt2 = conn.prepareStatement("INSERT INTO auth_functional_permission_usage (perm_id, used_at_operation, used_at_type) VALUES (?, ?, ?) ON CONFLICT (perm_id, used_at_operation, used_at_type) DO UPDATE SET last_seen_at = now()")) {
       pStmt.setString(1, Perm.name());
@@ -135,7 +137,7 @@ import software.theear.data.CDatabaseService;
             for (RequiredPermissions reqPerm : oneOf.value()) {
               for (FunctionalPermissions perm : reqPerm.value()) {
                 // Persist permission / FIXME: change mode instead of getting connection but instead "post function" that is enqueued and then executed while immediately return the permission of interest for caching
-                try { x(perm, m.getName(), cls.getName()); }
+                try { m_WriteFunctionalPermissionToDatabase(perm, m.getName(), cls.getName()); }
                 catch (SQLException Ex) {
                   log.error("Failed to write permission '{}' on operation '{}' on type '{}'. See exception for details.", perm.name(), m.getName(), cls.getName(), Ex);
                   System.exit(-1); // FIXME: get error code from constant' class
@@ -146,7 +148,7 @@ import software.theear.data.CDatabaseService;
           if (m.getAnnotation(RequiredPermissions.class) instanceof RequiredPermissions reqPerm) {
             for (FunctionalPermissions perm : reqPerm.value()) {
               // Persist permission / FIXME: change mode instead of getting connection but instead "post function" that is enqueued and then executed while immediately return the permission of interest for caching
-              try { x(perm, m.getName(), cls.getName()); }
+              try { m_WriteFunctionalPermissionToDatabase(perm, m.getName(), cls.getName()); }
               catch (SQLException Ex) {
                 log.error("Failed to write permission '{}' on operation '{}' on type '{}'. See exception for details.", perm.name(), m.getName(), cls.getName(), Ex);
                 System.exit(-1); // FIXME: get error code from constant' class

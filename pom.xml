@@ -26,7 +26,6 @@
     <version.spring-boot-starter-oauth2-client>${version.spring-boot}</version.spring-boot-starter-oauth2-client>
     <version.spring-boot-starter-web>${version.spring-boot}</version.spring-boot-starter-web>
     <version.spring-boot-validation>${version.spring-boot}</version.spring-boot-validation>
-    
   </properties>
   
   <dependencies>

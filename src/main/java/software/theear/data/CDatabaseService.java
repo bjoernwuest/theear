@@ -21,35 +21,35 @@ import software.theear.SystemExitReasons;
 
 @Service public class CDatabaseService {
   private final static Logger log = LoggerFactory.getLogger(CDatabaseService.class);
-  private HikariPool m_DatabasePool;
+  private final HikariConfig m_DatabaseConfig = new HikariConfig();
+  private final HikariPool m_DatabasePool;
   
   public CDatabaseService(@Autowired RDataConfiguration DBConfig) {
 	// TODO Auto-generated constructor stub
-    HikariConfig config = new HikariConfig();
 // FIXME: what is this?    config.addDataSourceProperty("", null);
-// FIXME: what is this?    config.setCatalog("");
-// FIXME: what is this?    config.setSchema("");
-    config.setAllowPoolSuspension(true);
-    config.setAutoCommit(false);
-    config.setConnectionInitSql("SELECT 1");
-    config.setConnectionTestQuery("SELECT 1");
-    config.setInitializationFailTimeout(-1); // Create pool regardless if connections can be got or not.
-    config.setIsolateInternalQueries(false);
-    config.setRegisterMbeans(true);
-    config.setConnectionTimeout(Math.max(1000, TimeUnit.MILLISECONDS.convert(60, TimeUnit.SECONDS))); // FIXME: move to configuration?
-    config.setIdleTimeout(Math.max(1000, TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES))); // FIXME: move to configuration?
-    config.setKeepaliveTime(Math.max(1000, TimeUnit.MILLISECONDS.convert(60, TimeUnit.SECONDS))); // FIXME: move to configuration?
-    config.setLeakDetectionThreshold(Math.max(0, TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES))); // FIXME: move to configuration?
-    config.setMaximumPoolSize(Math.min(100, Math.max(1, 2))); // FIXME: move to configuration? Keep this number rather low!
-    config.setMaxLifetime(Math.max(0, TimeUnit.MILLISECONDS.convert(360, TimeUnit.DAYS))); // FIXME: move to configuration?
-    config.setMinimumIdle(Math.min(100, Math.max(1, 2))); // FIXME: move to configuration? Keep this number rather low!
-    config.setPoolName("theear");
-    config.setValidationTimeout(Math.max(1000, TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS))); // FIXME: move to configuration?
+    this.m_DatabaseConfig.setAllowPoolSuspension(true);
+    this.m_DatabaseConfig.setAutoCommit(false);
+    this.m_DatabaseConfig.setConnectionInitSql("SELECT 1");
+    this.m_DatabaseConfig.setConnectionTestQuery("SELECT 1");
+    this.m_DatabaseConfig.setInitializationFailTimeout(-1); // Create pool regardless if connections can be got or not.
+    this.m_DatabaseConfig.setIsolateInternalQueries(false);
+    this.m_DatabaseConfig.setRegisterMbeans(true);
+    this.m_DatabaseConfig.setConnectionTimeout(Math.max(1000, TimeUnit.MILLISECONDS.convert(60, TimeUnit.SECONDS))); // FIXME: move to configuration?
+    this.m_DatabaseConfig.setIdleTimeout(Math.max(1000, TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES))); // FIXME: move to configuration?
+    this.m_DatabaseConfig.setKeepaliveTime(Math.max(1000, TimeUnit.MILLISECONDS.convert(60, TimeUnit.SECONDS))); // FIXME: move to configuration?
+    this.m_DatabaseConfig.setLeakDetectionThreshold(Math.max(0, TimeUnit.MILLISECONDS.convert(60, TimeUnit.MINUTES))); // FIXME: move to configuration?
+    this.m_DatabaseConfig.setMaximumPoolSize(Math.min(100, Math.max(1, 2))); // FIXME: move to configuration? Keep this number rather low!
+    this.m_DatabaseConfig.setMaxLifetime(Math.max(0, TimeUnit.MILLISECONDS.convert(360, TimeUnit.DAYS))); // FIXME: move to configuration?
+    this.m_DatabaseConfig.setMinimumIdle(Math.min(100, Math.max(1, 2))); // FIXME: move to configuration? Keep this number rather low!
+    this.m_DatabaseConfig.setPoolName("theear");
+    this.m_DatabaseConfig.setValidationTimeout(Math.max(1000, TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS))); // FIXME: move to configuration?
 //    config.setTransactionIsolation(""); // FIXME: to do
-    config.setJdbcUrl(String.format("jdbc:postgresql://%s:%d/%s", DBConfig.host(), DBConfig.port(), DBConfig.database()));
-    config.setPassword(DBConfig.password());
-    config.setUsername(DBConfig.username());
-    this.m_DatabasePool = new HikariPool(config);
+    this.m_DatabaseConfig.setCatalog(DBConfig.database());
+    this.m_DatabaseConfig.setSchema("public");
+    this.m_DatabaseConfig.setJdbcUrl(String.format("jdbc:postgresql://%s:%d/%s", DBConfig.host(), DBConfig.port(), DBConfig.database()));
+    this.m_DatabaseConfig.setPassword(DBConfig.password());
+    this.m_DatabaseConfig.setUsername(DBConfig.username());
+    this.m_DatabasePool = new HikariPool(this.m_DatabaseConfig);
     this.m_RawDatabaseFitnessCheck();
     this.m_InitDatabase();
   }

@@ -10,8 +10,9 @@ import com.giffing.wicket.spring.boot.context.scan.WicketHomePage;
 public class HomePage extends WebPage {
   private static final long serialVersionUID = 8919240523233153885L;
 
+  
   public HomePage(final PageParameters Parameters) {
     super(Parameters);
-    add(new Label("root", getApplication().getFrameworkSettings().getVersion()));
+    add(new Label("root", this.getApplication().getFrameworkSettings().getVersion()));
   }
 }
