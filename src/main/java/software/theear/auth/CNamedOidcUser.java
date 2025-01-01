@@ -28,7 +28,7 @@ public final class CNamedOidcUser extends DefaultOidcUser {
   
   public boolean isRoot() { return this.m_IsRoot; }
   
-  public boolean hasAllPermissions(FunctionalPermissions[] Permissions) {
+  public boolean hasAllPermissions(FunctionalPermissionsEnum[] Permissions) {
     if (this.m_IsRoot) return true; 
     return this.m_GetPermissions().containsAll(Arrays.asList(Permissions).stream().map(p -> p.name()).collect(Collectors.toList()));
   }

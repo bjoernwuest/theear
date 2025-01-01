@@ -21,7 +21,16 @@ public class CSession extends SecureWebSession {
         { this.m_User = namedUser; }
   }
   
+  /** Returns the user logged in to this session.
+   * 
+   * @return The user logged in. May be {@code null} if no user is logged in.
+   */
   public CNamedOidcUser getUser() { return this.m_User; }
+  /** Check if the user has "root" privileges, i.e. is permitted any action regardless of any permission assignment.
+   * 
+   * @return {@code true} if the user of this session has "root" privileges. {@code false} if not, or there is no user logged in to this session.
+   */
+  public boolean isUserRoot() { return (null != this.m_User) ? this.m_User.isRoot() : false; }
   
-  @Override public Roles getRoles() { return this.m_User.getRoles(); }
+  @Override public Roles getRoles() { return (null != this.m_User) ? this.m_User.getRoles() : new Roles(); }
 }

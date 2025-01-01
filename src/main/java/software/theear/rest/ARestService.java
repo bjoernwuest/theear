@@ -1,5 +1,6 @@
 package software.theear.rest;
 
+import java.lang.annotation.IncompleteAnnotationException;
 import java.util.Optional;
 
 import org.apache.wicket.request.http.WebRequest;
@@ -11,31 +12,32 @@ import org.wicketstuff.rest.resource.AbstractRestResource;
 import org.wicketstuff.rest.resource.MethodMappingInfo;
 import org.wicketstuff.restutils.wicket.AttributesWrapper;
 
-import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletRequest;
 import software.theear.auth.CNamedOidcUser;
-import software.theear.auth.OneOfRequiredPermissions;
-import software.theear.auth.RequiredPermissions;
+import software.theear.auth.OneOfRequiredFunctionalPermissions;
+import software.theear.auth.RequiredFunctionalPermissions;
 
 /** Base class for Wicketstuff'ed rest services.
  * 
- * Use this class instead of directly deriving from AbstractRestResource for simplified registration as well as support for permission checking using {@link RequiredPermissions} and {@link OneOfRequiredPermissions}.
+ * Use this class instead of directly deriving from AbstractRestResource for simplified registration as well as support for permission checking using {@link RequiredFunctionalPermissions} and {@link OneOfRequiredFunctionalPermissions}.
  * 
- * @author bjoern.wuest@gmx.net
+ * @author bjoern@liwuest.net
  */
-@RestService public abstract class ARestService extends AbstractRestResource<JsonWebSerialDeserial> {
+public abstract class ARestService extends AbstractRestResource<JsonWebSerialDeserial> {
   private static final long serialVersionUID = 791899004161345758L;
   private final String m_RootPath;
   
+  public static String toRootPath(String Path) { return Path.startsWith("/") ? Path : "/" + Path; }
+  
   /** Subclasses must super(...) this constructor to actually ensure proper service registration.
-   * 
-   * @param RootPath The root path of this rest resource.
    * 
    * FIXME: add validation so RootPath is a valid REST URL path!
    */
-  protected ARestService(@Nonnull String RootPath) {
+  protected ARestService() {
     super(new JsonWebSerialDeserial(new GsonObjectSerialDeserial()));
-    this.m_RootPath = RootPath.startsWith("/") ? RootPath : "/" + RootPath;
+    if (this.getClass().getAnnotation(RestService.class) instanceof RestService annon) {
+      this.m_RootPath = toRootPath(annon.value());
+    } else throw new IncompleteAnnotationException(RestService.class, "Need to provide this annotation to set root path for REST service.");
   }
   
   /** Get the URI root path this service shall register at.
@@ -72,15 +74,15 @@ import software.theear.auth.RequiredPermissions;
       // Get the user of the session doing the request
       Optional<CNamedOidcUser> sessionUser = p_GetSessionUser();
       // We have at least a REST method, try to get annotations for permissions; check "groups of permissions" first
-      OneOfRequiredPermissions oneOfPerms = mappedMethod.getMethod().getAnnotation(OneOfRequiredPermissions.class);
-      RequiredPermissions perms = mappedMethod.getMethod().getAnnotation(RequiredPermissions.class);
+      OneOfRequiredFunctionalPermissions oneOfPerms = mappedMethod.getMethod().getAnnotation(OneOfRequiredFunctionalPermissions.class);
+      RequiredFunctionalPermissions perms = mappedMethod.getMethod().getAnnotation(RequiredFunctionalPermissions.class);
       if (null != oneOfPerms) {
-    	if (sessionUser.isPresent()) { // Only check for permissions if there is user
-          for (RequiredPermissions p : oneOfPerms.value()) {
-            sufficientPermissions = sessionUser.get().hasAllPermissions(p.value());
-            if (sufficientPermissions) break; // If we have sufficient permissions, do not check further
+      	if (sessionUser.isPresent()) { // Only check for permissions if there is user
+            for (RequiredFunctionalPermissions p : oneOfPerms.value()) {
+              sufficientPermissions = sessionUser.get().hasAllPermissions(p.value());
+              if (sufficientPermissions) break; // If we have sufficient permissions, do not check further
+            }
           }
-        }
       } else if ((null != perms) && sessionUser.isPresent()) { sufficientPermissions = sessionUser.get().hasAllPermissions(perms.value()); }
       else sufficientPermissions = true; // There are no permissions configured, so anyone can access
     } else sufficientPermissions = true; // This is no REST method so anyone can access
