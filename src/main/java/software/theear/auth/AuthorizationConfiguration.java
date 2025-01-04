@@ -8,4 +8,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 
  * @author bjoern.wuest@gmx.net
  */
-@ConfigurationProperties(prefix = "spring.security.oauth2.client") public record RAuthorizationConfiguration(Map<String, Object> registration) {}
+@ConfigurationProperties(prefix = "spring.security.oauth2.client") public record AuthorizationConfiguration(Map<String, Object> registration) {}

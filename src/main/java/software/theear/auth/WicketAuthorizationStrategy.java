@@ -16,7 +16,7 @@ import org.apache.wicket.request.component.IRequestableComponent;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.request.resource.IResource;
 
-public class CWicketAuthorizationStrategy implements IAuthorizationStrategy {
+public class WicketAuthorizationStrategy implements IAuthorizationStrategy {
   /** Check class to instantiate by Wicket annotations if user of session has all the required roles.
    * 
    * @param ClassToInstantiate The class to instantiate by Wicket
@@ -33,7 +33,7 @@ public class CWicketAuthorizationStrategy implements IAuthorizationStrategy {
   }
   @Override public <T extends IRequestableComponent> boolean isInstantiationAuthorized(Class<T> componentClass) {
     // If there is a session, do the permission check
-    if (Session.get() instanceof CSession secSess) { return secSess.isUserRoot() || checkInsantiation(componentClass, secSess.getRoles()); }
+    if (Session.get() instanceof AuthenticatedSession secSess) { return secSess.isUserRoot() || checkInsantiation(componentClass, secSess.getRoles()); }
     // Otherwise, fail if class is annotated, or succeed if not
     return checkInsantiation(componentClass, new Roles());
   }
@@ -57,7 +57,7 @@ public class CWicketAuthorizationStrategy implements IAuthorizationStrategy {
   }
   @Override public boolean isActionAuthorized(Component component, Action action) {
     // If there is a session, do the permission check
-    if (Session.get() instanceof CSession secSess) { return secSess.isUserRoot() || checkAction(component, action, secSess.getRoles()); }
+    if (Session.get() instanceof AuthenticatedSession secSess) { return secSess.isUserRoot() || checkAction(component, action, secSess.getRoles()); }
     // Otherwise, fail if class is annotated, or succeed if not
     return checkAction(component, action, new Roles());
   }
@@ -70,7 +70,7 @@ public class CWicketAuthorizationStrategy implements IAuthorizationStrategy {
   }
   @Override public boolean isResourceAuthorized(IResource resource, PageParameters parameters) {
     // If there is a session, do the permission check
-    if (Session.get() instanceof CSession secSess) { return secSess.isUserRoot() || checkResource(resource, parameters, secSess.getRoles()); }
+    if (Session.get() instanceof AuthenticatedSession secSess) { return secSess.isUserRoot() || checkResource(resource, parameters, secSess.getRoles()); }
     // Otherwise, fail if class is annotated, or succeed if not
     return checkResource(resource, parameters, new Roles());
   }

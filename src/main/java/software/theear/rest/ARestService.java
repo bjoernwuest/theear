@@ -13,7 +13,7 @@ import org.wicketstuff.rest.resource.MethodMappingInfo;
 import org.wicketstuff.restutils.wicket.AttributesWrapper;
 
 import jakarta.servlet.http.HttpServletRequest;
-import software.theear.auth.CNamedOidcUser;
+import software.theear.auth.COidcUser;
 import software.theear.auth.OneOfRequiredFunctionalPermissions;
 import software.theear.auth.RequiredFunctionalPermissions;
 
@@ -52,13 +52,13 @@ public abstract class ARestService extends AbstractRestResource<JsonWebSerialDes
    * 
    * @return Optional with the user that this session is linked to. If there is no user linked to the session, then the optional is empty.
    */
-  protected final Optional<CNamedOidcUser> p_GetSessionUser() {
+  protected final Optional<COidcUser> p_GetSessionUser() {
 	WebRequest wr = super.getCurrentWebRequest();
   	if (null != wr) {
         Object cr = wr.getContainerRequest();
         if ((cr instanceof HttpServletRequest hsr) 
             && (hsr.getUserPrincipal() instanceof OAuth2AuthenticationToken at) 
-            && (at.getPrincipal() instanceof CNamedOidcUser namedUser))
+            && (at.getPrincipal() instanceof COidcUser namedUser))
             { return Optional.of(namedUser); }
   	}
     return Optional.empty();
@@ -72,7 +72,7 @@ public abstract class ARestService extends AbstractRestResource<JsonWebSerialDes
     // Only check if this is an annotated REST method
     if (null != mappedMethod.getMethod().getAnnotation(MethodMapping.class)) {
       // Get the user of the session doing the request
-      Optional<CNamedOidcUser> sessionUser = p_GetSessionUser();
+      Optional<COidcUser> sessionUser = p_GetSessionUser();
       // We have at least a REST method, try to get annotations for permissions; check "groups of permissions" first
       OneOfRequiredFunctionalPermissions oneOfPerms = mappedMethod.getMethod().getAnnotation(OneOfRequiredFunctionalPermissions.class);
       RequiredFunctionalPermissions perms = mappedMethod.getMethod().getAnnotation(RequiredFunctionalPermissions.class);

@@ -90,5 +90,5 @@ import software.theear.SystemExitReasons;
     }
   }
   
-  @Deprecated public Connection getConnection() throws SQLException { return this.m_DatabasePool.getConnection(); }
+  public Connection getConnection() throws SQLException { return this.m_DatabasePool.getConnection(); }
 }

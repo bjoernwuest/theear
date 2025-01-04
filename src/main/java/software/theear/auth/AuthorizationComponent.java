@@ -12,8 +12,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import org.apache.wicket.authroles.authorization.strategies.role.annotations.AuthorizeAction;
 import org.apache.wicket.authroles.authorization.strategies.role.annotations.AuthorizeActions;
@@ -32,6 +30,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.stereotype.Component;
@@ -40,18 +40,23 @@ import com.google.common.reflect.ClassPath;
 
 import software.theear.Application;
 import software.theear.data.CDatabaseService;
+import software.theear.user.NewUserEventbus;
+import software.theear.user.UserProfile;
 
 /** Provides user authentication and authorization.
  * 
  * @author bjoern@liwuest.net
  */
-@Component public class CAuthorizationComponent {
-	@Autowired RAuthorizationConfiguration m_AuthConfig;
+@Component public class AuthorizationComponent {
+  private final static Logger log = LoggerFactory.getLogger(AuthorizationComponent.class);
 	private final CDatabaseService m_DBService;
-  private final static Logger log = LoggerFactory.getLogger(CAuthorizationComponent.class);
+	private final NewOidcAuthorityEventbus m_NewOidcAuthorityEventbus;
+  @Autowired AuthorizationConfiguration m_AuthConfig;
+  @Autowired NewUserEventbus m_NewUserEventbus;
   
-  public CAuthorizationComponent(@Autowired CDatabaseService DBService) {
+  public AuthorizationComponent(@Autowired CDatabaseService DBService, @Autowired NewOidcAuthorityEventbus NewOidcAuthorityEventbus) {
   	this.m_DBService = DBService;
+  	this.m_NewOidcAuthorityEventbus = NewOidcAuthorityEventbus;
   	this.scanAndRegisterFunctionlPermissions();
 	}
 	
@@ -79,9 +84,9 @@ import software.theear.data.CDatabaseService;
 
 	/** Convert user request (from oauth2 login procedure) into user principal object.
 	 * 
-	 * The user principal is of type {@link CNamedOidcUser}.
+	 * The user principal is of type {@link OidcUser}.
 	 * 
-	 * @return Service to convert request to {@link CNamedOidcUser} user principal.
+	 * @return Service to convert request to {@link OidcUser} user principal.
 	 */
   private OAuth2UserService<OidcUserRequest, OidcUser> customOidcUserService() {
     final OidcUserService delegate = new OidcUserService();
@@ -105,14 +110,53 @@ import software.theear.data.CDatabaseService;
           if ((null != adminRole) && groups.contains(adminRole)) isRoot = true;
         }
       }
-      CNamedOidcUser result = new CNamedOidcUser(grantedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo(), oidcUser.getName(), isRoot);
-      // FIXME: if data base is configured, register user (regardless if the user is present or not)
-      return result;
+      // Persist account
+      try (Connection conn = this.m_DBService.getConnection(); PreparedStatement pStmt = conn.prepareStatement("INSERT INTO user_account (oidc_issuer, oidc_subject) VALUES (?, ?) ON CONFLICT (oidc_issuer, oidc_subject) DO UPDATE SET last_seen_at = now() RETURNING user_id, created_at, last_seen_at")) {
+        pStmt.setString(1, oidcUser.getIssuer().toString());
+        pStmt.setString(2, oidcUser.getSubject());
+        try (ResultSet rSet = pStmt.executeQuery()) {
+          rSet.next();
+          // Create user profile for account
+          try (PreparedStatement pStmt2 = conn.prepareStatement("INSERT INTO user_profile (user_id, email, full_name, given_name, family_name) VALUES (?, ?, ?, ?, ?) ON CONFLICT (user_id) DO UPDATE SET email = ?, full_name = ?, given_name = ?, family_name = ?, last_seen_at = now() RETURNING created_at, last_seen_at")) {
+            pStmt2.setObject(1, rSet.getObject(1, UUID.class));
+            pStmt2.setString(2, oidcUser.getEmail());
+            pStmt2.setString(3, oidcUser.getFullName());
+            pStmt2.setString(4, oidcUser.getGivenName());
+            pStmt2.setString(5, oidcUser.getFamilyName());
+            pStmt2.setString(6, oidcUser.getEmail());
+            pStmt2.setString(7, oidcUser.getFullName());
+            pStmt2.setString(8, oidcUser.getGivenName());
+            pStmt2.setString(9, oidcUser.getFamilyName());
+            try (ResultSet rSet2 = pStmt2.executeQuery()) {
+              conn.commit();
+              // Create user profile object
+              rSet2.next();
+              UserProfile user = new UserProfile(rSet.getObject(1, UUID.class), oidcUser.getEmail(), oidcUser.getFullName(), oidcUser.getGivenName(), oidcUser.getFamilyName(), rSet2.getTimestamp(1).toInstant(), rSet2.getTimestamp(2).toInstant());
+              // Announce new user in eventbus
+              this.m_NewUserEventbus.send(user);
+              // Add user profile to authenticated user object
+              COidcUser result = new COidcUser(this.m_DBService, grantedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo(), isRoot, user, rSet.getTimestamp(2).toInstant(), rSet.getTimestamp(3).toInstant());
+              // Update "best known" user / oidc group mapping
+              try (PreparedStatement pStmt3 = conn.prepareStatement("DELETE FROM user_oidc_group_map WHERE user_id = ?"); PreparedStatement pStmt4 = conn.prepareStatement("INSERT INTO user_oidc_group_map (user_id, group_id) VALUES (?, ?) ON CONFLICT DO NOTHING")) {
+                pStmt3.setObject(1, result.user.UserID());
+                pStmt3.execute();
+                pStmt4.setObject(1, result.user.UserID());
+                for (GrantedAuthority a : result.getAuthorities()) {
+                  if (a instanceof OidcAuthority oa) {
+                    pStmt4.setObject(2, oa.GroupID);
+                    pStmt4.execute();
+                  }
+                }
+                conn.commit();
+              } catch (SQLException Ignore) { log.trace("Failed to write user_id / group_id mapping.", Ignore); /* not too important if this fails */ }
+              // Return authenticated user object
+              return result;
+            }
+          }
+        }
+      } catch (SQLException Ex) { log.error("Failure in application peristence layer. Cannot authenticate user.", Ex); throw new OAuth2AuthenticationException(new OAuth2Error("Failure in application persistence layer. Cannot authenticate user."), Ex); }
     };
   }
-  
-  /** Cache of known authorities, i.e. groups from IDP's. */
-  private ConcurrentMap<String, OIDCAuthority> m_Authorities = new ConcurrentHashMap<>();
   
   /** Resolve group of identity issuer to readable group name and persist in data base.
    * 
@@ -125,14 +169,14 @@ import software.theear.data.CDatabaseService;
     // FIXME: translate group in "Groupname" [which are OID from EntraID] into "reasonable" group names
     
     // IDP groups do not necessarily need to be done in background mode
-    try (@SuppressWarnings("deprecation") Connection conn = this.m_DBService.getConnection(); PreparedStatement pStmt = conn.prepareStatement("INSERT INTO auth_oidc_groups (oidc_issuer, oidc_group_name) VALUES (?, ?) ON CONFLICT (oidc_issuer, oidc_group_name) DO UPDATE SET last_seen_at = now() RETURNING oidc_issuer, oidc_group_name, created_at, last_seen_at")) {
+    try (Connection conn = this.m_DBService.getConnection(); PreparedStatement pStmt = conn.prepareStatement("INSERT INTO auth_oidc_groups (oidc_issuer, oidc_group_name) VALUES (?, ?) ON CONFLICT (oidc_issuer, oidc_group_name) DO UPDATE SET last_seen_at = now() RETURNING group_id, created_at, last_seen_at")) {
       pStmt.setString(1, Issuer);
       pStmt.setString(2, GroupID);
       try (ResultSet rSet = pStmt.executeQuery()) {
         conn.commit();
         rSet.next();
-        OIDCAuthority authority = new OIDCAuthority(rSet.getString(1), rSet.getString(2), rSet.getTimestamp(3).toInstant(), rSet.getTimestamp(4).toInstant());
-        this.m_Authorities.put(authority.Identifier, authority);
+        OidcAuthority authority = new OidcAuthority(rSet.getObject(1, UUID.class), Issuer, GroupID, rSet.getTimestamp(2).toInstant(), rSet.getTimestamp(3).toInstant());
+        this.m_NewOidcAuthorityEventbus.send(authority);
         return authority;
       }
     }
@@ -148,7 +192,7 @@ import software.theear.data.CDatabaseService;
    */
   private void persistFunctionalPermissionInDatabase(String TypeName, String OperationName, String PermissionName, String PermissionAction, String PermissionDescription) {
     // Suppress depreciation warning on "getConnection" since we are in app init phase.
-    try (@SuppressWarnings("deprecation") Connection conn = this.m_DBService.getConnection(); PreparedStatement permStmt = conn.prepareStatement("INSERT INTO auth_functional_permissions (perm_name, perm_action, perm_description) VALUES (?, ?, ?) ON CONFLICT (perm_name, perm_action) DO UPDATE SET last_seen_at = now() RETURNING perm_id")) {
+    try (Connection conn = this.m_DBService.getConnection(); PreparedStatement permStmt = conn.prepareStatement("INSERT INTO auth_functional_permissions (perm_name, perm_action, perm_description) VALUES (?, ?, ?) ON CONFLICT (perm_name, perm_action) DO UPDATE SET last_seen_at = now() RETURNING perm_id")) {
       log.debug("Persist permission '{}' with action '{}' and description '{}' on type '{}' on operation '{}'.", PermissionName, PermissionAction, PermissionDescription, TypeName, OperationName);
       permStmt.setString(1, PermissionName);
       permStmt.setString(2, PermissionAction);

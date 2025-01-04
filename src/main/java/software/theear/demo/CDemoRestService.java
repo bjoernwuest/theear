@@ -8,7 +8,7 @@ import org.wicketstuff.rest.annotations.MethodMapping;
 import org.wicketstuff.rest.annotations.parameters.RequestParam;
 
 import jakarta.annotation.Nonnull;
-import software.theear.auth.CNamedOidcUser;
+import software.theear.auth.COidcUser;
 import software.theear.auth.FunctionalPermissionsEnum;
 import software.theear.auth.OneOfRequiredFunctionalPermissions;
 import software.theear.auth.RequiredFunctionalPermissions;
@@ -25,9 +25,9 @@ import software.theear.rest.RestService;
   @RequiredFunctionalPermissions({FunctionalPermissionsEnum.Hello, FunctionalPermissionsEnum.Out})
   @MethodMapping("/test")
   public String test(@RequestParam(value = "continue", required = false) Object Ignore) {
-  	Optional<CNamedOidcUser> user = p_GetSessionUser();
+  	Optional<COidcUser> user = p_GetSessionUser();
   	log.info("test function - GET /: user={}", user);
-  	if (user.isPresent()) { return user.get().userName(); }
+  	if (user.isPresent()) { return user.get().getEmail(); }
   	return "test";
   }
 }
