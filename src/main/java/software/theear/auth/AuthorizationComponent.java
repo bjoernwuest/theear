@@ -51,8 +51,8 @@ import software.theear.user.UserProfile;
   private final static Logger log = LoggerFactory.getLogger(AuthorizationComponent.class);
 	private final CDatabaseService m_DBService;
 	private final NewOidcAuthorityEventbus m_NewOidcAuthorityEventbus;
-  @Autowired AuthorizationConfiguration m_AuthConfig;
-  @Autowired NewUserEventbus m_NewUserEventbus;
+  @Autowired private AuthorizationConfiguration m_AuthConfig;
+  @Autowired private NewUserEventbus m_NewUserEventbus;
   
   public AuthorizationComponent(@Autowired CDatabaseService DBService, @Autowired NewOidcAuthorityEventbus NewOidcAuthorityEventbus) {
   	this.m_DBService = DBService;
@@ -101,7 +101,7 @@ import software.theear.user.UserProfile;
         // Get granted authorities from the user's groups
         for (Object g : groups) {
           try { grantedAuthorities.add(resolveAndRegisterEntraIDGroup(oidcUser.getIssuer().toString(), g.toString())); }
-          catch (SQLException Ex) { log.error("FIXME", Ex); } // FIXME eventually, reduce to WARN since user is still valid but just has less permissions than expected? But give details on affected group
+          catch (SQLException Ex) { log.warn("Failed to register groups / roles / permissions for logged in user. The user likely has less permissions than expected. Since this error is not critical, the application continues. See exception for details on the cause.", Ex); }
         }
         // Check if user is in admin_role_id and thus has root privileges
         Object config = m_AuthConfig.registration().get(userRequest.getClientRegistration().getRegistrationId());
@@ -135,15 +135,15 @@ import software.theear.user.UserProfile;
               // Announce new user in eventbus
               this.m_NewUserEventbus.send(user);
               // Add user profile to authenticated user object
-              COidcUser result = new COidcUser(this.m_DBService, grantedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo(), isRoot, user, rSet.getTimestamp(2).toInstant(), rSet.getTimestamp(3).toInstant());
+              COidcUser result = new COidcUser(grantedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo(), isRoot, user, rSet.getTimestamp(2).toInstant(), rSet.getTimestamp(3).toInstant());
               // Update "best known" user / oidc group mapping
               try (PreparedStatement pStmt3 = conn.prepareStatement("DELETE FROM user_oidc_group_map WHERE user_id = ?"); PreparedStatement pStmt4 = conn.prepareStatement("INSERT INTO user_oidc_group_map (user_id, group_id) VALUES (?, ?) ON CONFLICT DO NOTHING")) {
-                pStmt3.setObject(1, result.user.UserID());
+                pStmt3.setObject(1, result.Userprofile.UserID());
                 pStmt3.execute();
-                pStmt4.setObject(1, result.user.UserID());
+                pStmt4.setObject(1, result.Userprofile.UserID());
                 for (GrantedAuthority a : result.getAuthorities()) {
                   if (a instanceof OidcAuthority oa) {
-                    pStmt4.setObject(2, oa.GroupID);
+                    pStmt4.setObject(2, oa.AuthorityID);
                     pStmt4.execute();
                   }
                 }
@@ -175,7 +175,7 @@ import software.theear.user.UserProfile;
       try (ResultSet rSet = pStmt.executeQuery()) {
         conn.commit();
         rSet.next();
-        OidcAuthority authority = new OidcAuthority(rSet.getObject(1, UUID.class), Issuer, GroupID, rSet.getTimestamp(2).toInstant(), rSet.getTimestamp(3).toInstant());
+        OidcAuthority authority = new OidcAuthority(Issuer, rSet.getObject(1, UUID.class), GroupID, rSet.getTimestamp(2).toInstant(), rSet.getTimestamp(3).toInstant());
         this.m_NewOidcAuthorityEventbus.send(authority);
         return authority;
       }
@@ -206,7 +206,7 @@ import software.theear.user.UserProfile;
         }
       }
       conn.commit();
-    } catch (SQLException Ex) { log.error("FIXME", Ex); } // FIXME
+    } catch (SQLException Ex) { log.warn(String.format("Failed to persist function permission. See exception for details on cause. This error is not critical, so the application continues. Further parameters:\n\tType: {}\n\tOperation: {}\n\tPermission: {}\n\tAction: {}\n\tDescription: {}", TypeName, OperationName, PermissionName, PermissionAction, PermissionDescription), Ex); }
   }
   
   /** Scan, and if found persist, functional permissions on given annotated element.
@@ -264,6 +264,6 @@ import software.theear.user.UserProfile;
         for (Constructor<?> c : cls.getConstructors()) { scanAnnotatedElementForFunctionalPermissions(cls.getName(), c.getName(), c); }
         for (Method m : cls.getMethods()) { scanAnnotatedElementForFunctionalPermissions(cls.getName(), m.toString(), m); }
       });
-    } catch (Throwable T) { log.error("FIXME", T); } // FIXME
+    } catch (Throwable T) { log.warn("Failed to scan packages, classes and methods for annotations with permissions. See exception for potential causes. This error is not-critical, so the application continues.", T); }
   }
 }

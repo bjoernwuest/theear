@@ -19,11 +19,24 @@ spring:
             - openid
             - email
             - profile
-            admin_role_id: "24469a49-cfbb-4095-95f6-9d97f6e69cce"
+            admin_role_id: "24469a49-cfbb-4095-95f6-9d97f6e69cce" # The ID of the EntraID group a user needs to have to become a root user
             
 database:
-  username: theear
-  password: theear
+  # host: address # Address of the data base host
+  # port: number # The port number of the data base server
+  # database: theear # Name of the data base to connect to
+  username: theear # Username to the data base
+  password: theear # The password of the user
+  # options: ... # Additional JDBC connection options to apply
+  # connectionTimeout: 1 # Time in minutes before a connection is considered to be timed out. Is a minimum of 1 minute.
+  # idleConnectionTimeout: 1 # Time in minutes before a connection is considered to be idle and subject to be closed. Is a minimum of 1 minute.
+  # connectionKeepaliveInterval: 1 # Time in minutes idle connections are checked if they are still alive and usable. Is a minimum of 1 minute.
+  # leakDetectionInterval: 1 # The time in minutes before a connection requested by a process is considered to be stalled and declared invalid. Consequently, the process acquiring the connection throws SQLException and others
+  # maximumConnectionPoolSize: 2 # The maximum number of connections in the data base connection pool. Is always bigger than one and smaller than 101.
+  # minimumIdleConnections: 1 # The minimum number of idle connections in the data base connection pool. Is always a positive number.
+  # validConnectionDetectionTimeout: 1 # The number of seconds until a new connection must be detected as valid before it is discaded. Minimum is 1 second.
+  # maximumConnectionLifetime: 30 # The maximum number of minutes a connection is kept before it is discarded (if idle) in favor of a new connection. Minimum is 30 minutes.
+  
   
 wicket:
   core:

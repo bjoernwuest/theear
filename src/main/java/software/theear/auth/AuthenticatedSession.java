@@ -8,6 +8,10 @@ import com.giffing.wicket.spring.boot.starter.configuration.extensions.external.
 
 import jakarta.servlet.http.HttpServletRequest;
 
+/** Implementation of secure web session that carries information on the authenticated used, if present.
+ * 
+ * @author bjoern@liwuest.net 
+ */
 public class AuthenticatedSession extends SecureWebSession {
   private static final long serialVersionUID = 1139594419058439059L;
   private COidcUser m_User;
@@ -30,7 +34,7 @@ public class AuthenticatedSession extends SecureWebSession {
    * 
    * @return {@code true} if the user of this session has "root" privileges. {@code false} if not, or there is no user logged in to this session.
    */
-  public boolean isUserRoot() { return (null != this.m_User) ? this.m_User.isRoot : false; }
+  public boolean isUserRoot() { return COidcUser.isRoot(this.m_User); }
   
-  @Override public Roles getRoles() { return (null != this.m_User) ? this.m_User.getRoles() : new Roles(); }
+  @Override public Roles getRoles() { return COidcUser.getRoles(this.m_User); }
 }

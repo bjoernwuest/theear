@@ -21,7 +21,7 @@ import software.theear.util.CHardReference;
  * 
  * Classes found will be instantiated 
  * 
- * @author bjoern.wuest@gmx.net
+ * @author bjoern@liwuest.net
  */
 @Component public class CWicketRegistration implements WicketApplicationInitConfiguration {
   private final static Logger log = LoggerFactory.getLogger(CWicketRegistration.class);

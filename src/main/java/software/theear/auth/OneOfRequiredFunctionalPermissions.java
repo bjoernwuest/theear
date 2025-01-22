@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * 
  * One of the given permission set needs to be satisfied. That is, {@link RequiredFunctionalPermissions} means that all listed permissions must be satisfied. With this annotation, multiple {@link RequiredFunctionalPermissions} can be grouped where only one of them needs to be satisfied.
  * 
- * @author bjoern.wuest@gmx.net
+ * @author bjoern@liwuest.net
  */
 @Documented
 @Retention(RUNTIME)

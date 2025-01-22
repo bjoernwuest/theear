@@ -5,6 +5,8 @@ package software.theear.util;
  * The referenced object is garbage collected only once this reference is garbage collected.
  * 
  * @param <T> The type of object that this reference can hold.
+ * 
+ * @author bjoern@liwuest.net
  */
 public final class CHardReference<T> {
 	private T m_Ref = null;

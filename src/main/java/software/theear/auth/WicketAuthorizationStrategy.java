@@ -16,8 +16,12 @@ import org.apache.wicket.request.component.IRequestableComponent;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.request.resource.IResource;
 
+/** Authorization strategy for Wicket supporting {@link COidcUser} in {@link AuthenticatedSession}.
+ * 
+ * @author bjoern@liwuest.net
+ */
 public class WicketAuthorizationStrategy implements IAuthorizationStrategy {
-  /** Check class to instantiate by Wicket annotations if user of session has all the required roles.
+  /** Check class to instantiate by Wicket annotations if user of session has all the required roles (permissions).
    * 
    * @param ClassToInstantiate The class to instantiate by Wicket
    * @param UserRoles The roles the user has
@@ -38,6 +42,13 @@ public class WicketAuthorizationStrategy implements IAuthorizationStrategy {
     return checkInsantiation(componentClass, new Roles());
   }
 
+  /** Check action on (Wicket) component if user of session has all the required roles (permissions).
+   * 
+   * @param Comp The actual component to check action for.
+   * @param Act The action to check.
+   * @param UserRoles The roles the user has.
+   * @return {@code true} if user has sufficient roles, {@code false} otherwise
+   */
   private boolean checkAction(Component Comp, Action Act, Roles UserRoles) {
     boolean result = false;
     if (Comp.getClass().getAnnotation(AuthorizeActions.class) instanceof AuthorizeActions groupAnnon) {
@@ -62,6 +73,13 @@ public class WicketAuthorizationStrategy implements IAuthorizationStrategy {
     return checkAction(component, action, new Roles());
   }
 
+  /** Check if user of session has all the required roles (permissions) to use the given resource.
+   * 
+   * @param Resource The actual resource.
+   * @param Parameters The parameters of the page the resource is applied to.
+   * @param UserRoles The roles of the user.
+   * @return {@code true} if user has sufficient roles, {@code false} otherwise
+   */
   private boolean checkResource(IResource Resource, PageParameters Parameters, Roles UserRoles) {
     boolean result = false;
     if (Resource.getClass().getAnnotation(AuthorizeResource.class) instanceof AuthorizeResource annon) { result |= UserRoles.containsAll(Arrays.asList(annon.value())); }

@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 
 /** Lists permissions required. All given permissions must be satisfied.
  * 
- * @author bjoern.wuest@gmx.net
+ * @author bjoern@liwuest.net
  */
 @Documented
 @Retention(RUNTIME)

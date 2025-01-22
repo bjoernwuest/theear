@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * 
  * Classes being market with this annotation must also derive from {@link ARestService}. 
  * 
- * @author bjoern.wuest@gmx.net
+ * @author bjoern@liwuest.net
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
