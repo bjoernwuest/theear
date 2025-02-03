@@ -13,7 +13,7 @@ import org.wicketstuff.rest.resource.MethodMappingInfo;
 import org.wicketstuff.restutils.wicket.AttributesWrapper;
 
 import jakarta.servlet.http.HttpServletRequest;
-import software.theear.auth.COidcUser;
+import software.theear.auth.OidcUser;
 import software.theear.auth.OneOfRequiredFunctionalPermissions;
 import software.theear.auth.RequiredFunctionalPermissions;
 
@@ -23,7 +23,7 @@ import software.theear.auth.RequiredFunctionalPermissions;
  * 
  * @author bjoern@liwuest.net
  */
-public abstract class ARestService extends AbstractRestResource<JsonWebSerialDeserial> {
+@RestService public abstract class AbstractRestService extends AbstractRestResource<JsonWebSerialDeserial> {
   private static final long serialVersionUID = 791899004161345758L;
   private final String m_RootPath;
   
@@ -33,11 +33,11 @@ public abstract class ARestService extends AbstractRestResource<JsonWebSerialDes
    * 
    * FIXME: add validation so RootPath is a valid REST URL path!
    */
-  protected ARestService() {
+  protected AbstractRestService() {
     super(new JsonWebSerialDeserial(new GsonObjectSerialDeserial()));
-    if (this.getClass().getAnnotation(RestService.class) instanceof RestService annon) {
+    if (this.getClass().getAnnotation(RootPath.class) instanceof RootPath annon) {
       this.m_RootPath = toRootPath(annon.value());
-    } else throw new IncompleteAnnotationException(RestService.class, "Need to provide this annotation to set root path for REST service.");
+    } else throw new IncompleteAnnotationException(RootPath.class, "Need to provide this annotation to set root path for REST service.");
   }
   
   /** Get the URI root path this service shall register at.
@@ -52,13 +52,13 @@ public abstract class ARestService extends AbstractRestResource<JsonWebSerialDes
    * 
    * @return Optional with the user that this session is linked to. If there is no user linked to the session, then the optional is empty.
    */
-  protected final Optional<COidcUser> p_GetSessionUser() {
+  protected final Optional<OidcUser> p_GetSessionUser() {
 	WebRequest wr = super.getCurrentWebRequest();
   	if (null != wr) {
         Object cr = wr.getContainerRequest();
         if ((cr instanceof HttpServletRequest hsr) 
             && (hsr.getUserPrincipal() instanceof OAuth2AuthenticationToken at) 
-            && (at.getPrincipal() instanceof COidcUser namedUser))
+            && (at.getPrincipal() instanceof OidcUser namedUser))
             { return Optional.of(namedUser); }
   	}
     return Optional.empty();
@@ -72,7 +72,7 @@ public abstract class ARestService extends AbstractRestResource<JsonWebSerialDes
     // Only check if this is an annotated REST method
     if (null != mappedMethod.getMethod().getAnnotation(MethodMapping.class)) {
       // Get the user of the session doing the request
-      Optional<COidcUser> sessionUser = p_GetSessionUser();
+      Optional<OidcUser> sessionUser = p_GetSessionUser();
       // We have at least a REST method, try to get annotations for permissions; check "groups of permissions" first
       OneOfRequiredFunctionalPermissions oneOfPerms = mappedMethod.getMethod().getAnnotation(OneOfRequiredFunctionalPermissions.class);
       RequiredFunctionalPermissions perms = mappedMethod.getMethod().getAnnotation(RequiredFunctionalPermissions.class);

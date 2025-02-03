@@ -15,7 +15,7 @@ import jakarta.annotation.Nonnull;
  * 
  * @author bjoern@liwuest.net
  */
-abstract class ATimedWeakReference<T> {
+abstract class TimedWeakReference<T> implements SettableReference<T> {
   /** A timer that can be used for value clearing upon expiration. */
   protected static Timer Timer = new Timer();
   /** A lock to use to prevent concurrent modification, e.g. clearing the reference and then immediately setting a new one. */
@@ -31,13 +31,6 @@ abstract class ATimedWeakReference<T> {
    * 
    * @return The value the reference points to, or {@code null} if it is expired and cannot be recreated via value generator.
    */
-  public abstract T get();
-  /** Set a new value.
-   * 
-   * Any previous value will be simply discarded from this instance.
-   * 
-   * @param NewValue The new value to set.
-   * @return Instance of this for fluent programming.
-   */
-  public abstract ATimedWeakReference<T> set(@Nonnull T NewValue);
+  @Override public abstract T get();
+  @Override public abstract TimedWeakReference<T> set(@Nonnull T NewValue);
 }

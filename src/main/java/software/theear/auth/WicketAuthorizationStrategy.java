@@ -16,7 +16,7 @@ import org.apache.wicket.request.component.IRequestableComponent;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.request.resource.IResource;
 
-/** Authorization strategy for Wicket supporting {@link COidcUser} in {@link AuthenticatedSession}.
+/** Authorization strategy for Wicket supporting {@link OidcUser} in {@link AuthenticatedSession}.
  * 
  * @author bjoern@liwuest.net
  */

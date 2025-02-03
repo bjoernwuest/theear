@@ -4,8 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.web.util.UriComponentsBuilder;
 
-@ConfigurationProperties("database")
-public record RDataConfiguration(
+@ConfigurationProperties("database") public record DataConfiguration(
     @DefaultValue("localhost") String host,
     @DefaultValue("5432") int port,
     @DefaultValue("theear") String database,
@@ -20,7 +19,7 @@ public record RDataConfiguration(
     @DefaultValue("1") int minimumIdleConnections,
     @DefaultValue("60") int validConnectionDetectionTimeout,
     @DefaultValue("30") int maximumConnectionLifetime) {
-	public RDataConfiguration {
+	public DataConfiguration {
 		if (1 > port) { port = 5432; }
 		options = UriComponentsBuilder.fromUriString(options).build().getQuery();
 		if ((null != options) && !options.startsWith("?")) options = "?" + options;

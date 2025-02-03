@@ -18,10 +18,11 @@
     <version.spring-boot>3.3.6</version.spring-boot>
     <version.wicket>10.0.0</version.wicket>
     <version.wicket-spring-boot-starter>4.0.0</version.wicket-spring-boot-starter>
-    <version.postgresql>42.7.4</version.postgresql>
+    <version.postgresql>42.7.5</version.postgresql>
     <version.hikaricp>6.2.1</version.hikaricp>
     <version.slf4j>2.0.16</version.slf4j>
     <version.google.guava>33.4.0-jre</version.google.guava>
+    <version.apache.commons>3.17.0</version.apache.commons>
     
     <version.spring-boot-starter-oauth2-client>${version.spring-boot}</version.spring-boot-starter-oauth2-client>
     <version.spring-boot-starter-web>${version.spring-boot}</version.spring-boot-starter-web>
@@ -86,6 +87,12 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${version.google.guava}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${version.apache.commons}</version>
     </dependency>
   </dependencies>
 </project>

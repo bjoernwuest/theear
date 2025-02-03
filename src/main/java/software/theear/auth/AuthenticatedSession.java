@@ -14,14 +14,14 @@ import jakarta.servlet.http.HttpServletRequest;
  */
 public class AuthenticatedSession extends SecureWebSession {
   private static final long serialVersionUID = 1139594419058439059L;
-  private COidcUser m_User;
+  private OidcUser m_User;
 
   public AuthenticatedSession(Request request) {
     super(request);
     Object cr = request.getContainerRequest();
     if ((cr instanceof HttpServletRequest hsr)
         && (hsr.getUserPrincipal() instanceof OAuth2AuthenticationToken at)
-        && (at.getPrincipal() instanceof COidcUser namedUser))
+        && (at.getPrincipal() instanceof OidcUser namedUser))
         { this.m_User = namedUser; }
   }
   
@@ -29,12 +29,12 @@ public class AuthenticatedSession extends SecureWebSession {
    * 
    * @return The user logged in. May be {@code null} if no user is logged in.
    */
-  public COidcUser getUser() { return this.m_User; }
+  public OidcUser getUser() { return this.m_User; }
   /** Check if the user has "root" privileges, i.e. is permitted any action regardless of any permission assignment.
    * 
    * @return {@code true} if the user of this session has "root" privileges. {@code false} if not, or there is no user logged in to this session.
    */
-  public boolean isUserRoot() { return COidcUser.isRoot(this.m_User); }
+  public boolean isUserRoot() { return OidcUser.isRoot(this.m_User); }
   
-  @Override public Roles getRoles() { return COidcUser.getRoles(this.m_User); }
+  @Override public Roles getRoles() { return OidcUser.getRoles(this.m_User); }
 }

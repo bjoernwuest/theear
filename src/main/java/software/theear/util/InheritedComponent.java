@@ -1,4 +1,4 @@
-package software.theear.rest;
+package software.theear.util;
 
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -8,12 +8,9 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Component;
 
-/** Annotation to indicate that class is a REST service.
- * 
- * Usually, only {@link AbstractRestService} needs to be marked by this. REST services shall derive from {@link AbstractRestService}.
+/** Marker for Spring Component that can be inherited. Meant to be applied to base classes and interfaces, e.g. for persistence.
  * 
  * @author bjoern@liwuest.net
  */
@@ -22,7 +19,4 @@ import org.springframework.stereotype.Component;
 @Target(TYPE)
 @Component
 @Inherited
-public @interface RestService {
-  @AliasFor(annotation = Component.class)
-  String value() default "";
-}
+public @interface InheritedComponent {}

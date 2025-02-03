@@ -44,11 +44,33 @@ public abstract class SimpleEventbus<T> {
    * @param Event The event to send to receivers.
    * @return This instance for fluent api.
    */
-  public final SimpleEventbus<T> send(final T Event) {
-    this.m_Receivers.forEach(r -> {
-      try { r.receive(Event); }
-      catch (Throwable T) { log.error("Failed to deliver event. Continue with next receiver.", T); }
-    });
+  public final SimpleEventbus<T> send(@Nonnull final T Event) {
+    if (null != Event) {
+      this.m_Receivers.forEach(r -> {
+        try { r.receive(Event); }
+        catch (Throwable T) { log.error("Failed to deliver event. Continue with next receiver.", T); }
+      });
+    }
+    return this;
+  }
+  /** Send event object to all currently registered receivers.
+   * 
+   * The event is send in its own thread. Thus, the caller receives control back, while sequence of event delivery is no longer guaranteed.
+   * 
+   * @param Event The event to send to receivers.
+   * @return This instance for fluent api.
+   */
+  public final SimpleEventbus<T> sendAsynchronous(@Nonnull final T Event) {
+    if (null != Event) {
+      (new Thread(new Runnable() {
+        @Override public void run() {
+          m_Receivers.forEach(r -> {
+            try { r.receive(Event); }
+            catch (Throwable T) { log.error("Failed to deliver event. Continue with next receiver.", T); }
+          });
+        }
+      }, "Simple Eventbus " + Event.getClass())).start();
+    }
     return this;
   }
 }

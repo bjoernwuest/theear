@@ -3,7 +3,8 @@ package software.theear;
 public enum SystemExitReasons {
 	NoDatabaseConnectivity(-1, "Could not connect to data base. Application requires a data base connection."),
 	CannotPrepareDatabase(-2, "Data base fitness check failed and cannot automatically fix. See application logs for details."),
-	FailedToPersistPermission(-3, "Failed to persist detected and used permission in data base.");
+	FailedToPersistPermission(-3, "Failed to persist detected and used permission in data base."),
+	FailedToInitialize(-4, "Could not initialize application. Check log for potential causes.");
 
   public final int ExitCode;
 	public final String Message;

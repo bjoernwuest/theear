@@ -9,11 +9,13 @@ import jakarta.annotation.Nonnull;
  * 
  * The referenced value is not cleared before the expiration time arrives, but may be cleared shortly after. The expiration time is set when the value is referenced, either by calling {@link #set(T)} or when the value is constructed by {@link ReferenceValueGenerator}.
  * 
+ * The default expiration time is 60 seconds but can be overwritten. Minimum time is one millisecond.
+ * 
  * @param <T> The type of the referenced value.
  * 
  * @author bjoern@liwuest.net
  */
-public final class CFixedExpirationWeakReference<T> extends ATimedWeakReference<T> {
+public final class FixedExpirationWeakReference<T> extends TimedWeakReference<T> {
   /** The time in milliseconds that a value is referred before the reference is {@link #clearReferencedValue() cleared}. */
   private final long ValueLifetime;
   /** The time (milliseconds since epoch) when the referenced value is cleared. */
@@ -31,12 +33,13 @@ public final class CFixedExpirationWeakReference<T> extends ATimedWeakReference<
       }
     };
   }
-  public CFixedExpirationWeakReference(@Nonnull T Value) { this(Value, null, 60000); } // FIXME: make the 60000 configurable
-  public CFixedExpirationWeakReference(@Nonnull ReferenceValueGenerator<T> ValueGenerator) { this(null, ValueGenerator, 60000); } // FIXME: make the 60000 configurable
-  private CFixedExpirationWeakReference(T Value, ReferenceValueGenerator<T> ValueGenerator, long ExpiresInMilliseconds) {
+  public FixedExpirationWeakReference(@Nonnull T Value) { this(Value, null); }
+  public FixedExpirationWeakReference(@Nonnull ReferenceValueGenerator<T> ValueGenerator) { this(null, ValueGenerator); }
+  public FixedExpirationWeakReference(@Nonnull T Value, @Nonnull ReferenceValueGenerator<T> ValueGenerator) { this(Value, ValueGenerator, 60000); }
+  private FixedExpirationWeakReference(T Value, ReferenceValueGenerator<T> ValueGenerator, long ExpiresInMilliseconds) {
     this.Reference = new WeakReference<>(Value);
     this.ValueGenerator = ValueGenerator;
-    this.ValueLifetime = ExpiresInMilliseconds;
+    this.ValueLifetime = Math.max(1, ExpiresInMilliseconds);
     this.ValueExpiresAt = System.currentTimeMillis() + this.ValueLifetime;
     if (null != Value) Timer.schedule(clearReferencedValue(), Math.max(1, this.ValueExpiresAt - System.currentTimeMillis()));
   }
@@ -55,7 +58,7 @@ public final class CFixedExpirationWeakReference<T> extends ATimedWeakReference<
     } finally { ConcurrencyLock.unlock(); }
   }
   
-  @Override public CFixedExpirationWeakReference<T> set(@Nonnull T NewValue) {
+  @Override public FixedExpirationWeakReference<T> set(@Nonnull T NewValue) {
     try {
       ConcurrencyLock.lock();
       this.Reference = new WeakReference<>(NewValue);

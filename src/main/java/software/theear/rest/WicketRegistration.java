@@ -15,23 +15,23 @@ import org.springframework.stereotype.Component;
 
 import com.giffing.wicket.spring.boot.context.extensions.WicketApplicationInitConfiguration;
 
-import software.theear.util.CHardReference;
+import software.theear.util.SettableHardReference;
 
-/** Searches the application for classes extending from {@link ARestService}.
+/** Searches the application for classes extending from {@link AbstractRestService}.
  * 
  * Classes found will be instantiated 
  * 
  * @author bjoern@liwuest.net
  */
-@Component public class CWicketRegistration implements WicketApplicationInitConfiguration {
-  private final static Logger log = LoggerFactory.getLogger(CWicketRegistration.class);
+@Component public class WicketRegistration implements WicketApplicationInitConfiguration {
+  private final static Logger log = LoggerFactory.getLogger(WicketRegistration.class);
   
   @Override public void init(WebApplication webApplication) {
-    log.debug("Register '{}' annotation to be scanned for.", RestService.class.getName());
+    log.debug("Register '{}' annotation to be scanned for.", RootPath.class.getName());
     ClassPathScanningCandidateComponentProvider provider = new ClassPathScanningCandidateComponentProvider(false);
-    provider.addIncludeFilter(new AnnotationTypeFilter(RestService.class));
+    provider.addIncludeFilter(new AnnotationTypeFilter(RootPath.class));
     
-    String packageName = CWicketRegistration.class.getPackageName();
+    String packageName = WicketRegistration.class.getPackageName();
     packageName = packageName.substring(0, packageName.lastIndexOf('.'));
     log.debug("Scan all packages below and including '{}'", packageName);
     
@@ -39,19 +39,19 @@ import software.theear.util.CHardReference;
       log.debug("Going to load class for rest service '{}'", bd.getBeanClassName());
       try {
         final Class<?> cls = Class.forName(bd.getBeanClassName());
-        log.debug("Check if rest service '{}' is subclassing from '{}'", cls.getName(), ARestService.class.getName());
-        if (ARestService.class.isAssignableFrom(cls)) {
+        log.debug("Check if rest service '{}' is subclassing from '{}'", cls.getName(), AbstractRestService.class.getName());
+        if (AbstractRestService.class.isAssignableFrom(cls)) {
           log.debug("Get constructor for rest service, either accepting '{}' or default constructor without any argument", WebApplication.class.getName());
-          final CHardReference<ARestService> serviceReference = new CHardReference<>();
+          final SettableHardReference<AbstractRestService> serviceReference = new SettableHardReference<>();
           try {
             Constructor<?> cons = cls.getDeclaredConstructor(WebApplication.class);
             log.debug("Found constructor on rest service '{}' accepting '{}'. Going to instantiate.", cls.getName(), WebApplication.class.getName());
-            serviceReference.set(ARestService.class.cast(cons.newInstance(webApplication)));
+            serviceReference.set(AbstractRestService.class.cast(cons.newInstance(webApplication)));
           } catch (NoSuchMethodException TryDefaultConstructor) {
             try {
               Constructor<?> cons = cls.getDeclaredConstructor();
               log.debug("Found default constructor on rest service '{}'. Going to instantiate.", cls.getName());
-              serviceReference.set(ARestService.class.cast(cons.newInstance()));
+              serviceReference.set(AbstractRestService.class.cast(cons.newInstance()));
             } catch (NoSuchMethodException Ignore) { log.debug("No valid constructor found on rest service '{}'. Skipping.", cls.getName()); }
           }
           if (null != serviceReference.get()) {
