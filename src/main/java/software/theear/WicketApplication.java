@@ -6,8 +6,9 @@ import org.springframework.stereotype.Component;
 
 import com.giffing.wicket.spring.boot.starter.app.WicketBootSecuredWebApplication;
 
-import software.theear.auth.AuthenticatedSession;
-import software.theear.auth.WicketAuthorizationStrategy;
+import software.theear.service.auth.AuthenticatedSession;
+import software.theear.service.auth.WicketAuthorizationStrategy;
+import software.theear.ui.HomePage;
 
 @Component public class WicketApplication extends WicketBootSecuredWebApplication {
   @Override protected void init() {

@@ -1,6 +1,13 @@
 logging:
   level:
-    root: DEBUG
+    root: WARN
+    software: TRACE
+    
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false
 
 spring:
   security:

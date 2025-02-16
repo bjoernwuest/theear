@@ -15,14 +15,14 @@
   <properties>
     <maven.compiler.target>21</maven.compiler.target>
     <maven.compiler.source>21</maven.compiler.source>
-    <version.spring-boot>3.3.6</version.spring-boot>
-    <version.wicket>10.0.0</version.wicket>
-    <version.wicket-spring-boot-starter>4.0.0</version.wicket-spring-boot-starter>
-    <version.postgresql>42.7.5</version.postgresql>
-    <version.hikaricp>6.2.1</version.hikaricp>
-    <version.slf4j>2.0.16</version.slf4j>
-    <version.google.guava>33.4.0-jre</version.google.guava>
-    <version.apache.commons>3.17.0</version.apache.commons>
+    <version.spring-boot>[3.3.8]</version.spring-boot>
+    <version.wicket>[10.0.0]</version.wicket>
+    <version.wicket-spring-boot-starter>[4.0.0]</version.wicket-spring-boot-starter>
+    <version.postgresql>[42.7,48)</version.postgresql>
+    <version.hikaricp>[6.2,6.3)</version.hikaricp>
+    <version.slf4j>[2.0,2.1)</version.slf4j>
+    <version.google.guava>[33.4,33.5)</version.google.guava>
+    <version.apache.commons>[3,4)</version.apache.commons>
     
     <version.spring-boot-starter-oauth2-client>${version.spring-boot}</version.spring-boot-starter-oauth2-client>
     <version.spring-boot-starter-web>${version.spring-boot}</version.spring-boot-starter-web>
@@ -40,11 +40,22 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-oauth2-client</artifactId>
       <version>${version.spring-boot-starter-oauth2-client}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>net.minidev</groupId>
+          <artifactId>json-smart</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
       <version>${version.spring-boot-validation}</version>
+    </dependency>
+    <dependency>
+      <groupId>net.minidev</groupId>
+      <artifactId>json-smart</artifactId>
+      <version>2.5.2</version>
     </dependency>
     
     <!-- WICKET-SPRING-BOOT DEPENDENCY -->
@@ -95,4 +106,15 @@
       <version>${version.apache.commons}</version>
     </dependency>
   </dependencies>
+  
+  <repositories>
+    <repository>
+      <releases><enabled>true</enabled></releases>
+      <snapshots><enabled>false</enabled></snapshots>
+      <name>Maven Central</name>
+      <url>https://repo.maven.apache.org/maven2</url>
+      <id>default</id>
+      
+    </repository>
+  </repositories>
 </project>

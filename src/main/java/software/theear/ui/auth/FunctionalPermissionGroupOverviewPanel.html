@@ -1,0 +1,26 @@
+<html>
+  <head></head>
+  <body>
+    <wicket:panel>
+      <form wicket:id="newFunctionalPermissionGroupForm">
+        <wicket:message key="newName">New group name</wicket:message>
+        <input type="text" wicket:id="newNameInput"/>
+        <input type="submit" wicket:id="createNewGroup" value="Create"/>
+      </form>
+      <div style="display: table;">
+        <div style="display: table-header-group;">
+          <div style="display: table-cell"><wicket:message key="name">Functional permission group name</wicket:message></div>
+          <div style="display: table-cell"><wicket:message key="description">Description</wicket:message></div>
+        </div>
+          <div wicket:id="functionalPermissionGroupsList" style="display: table-row;">
+            <form wicket:id="functionalPermissionGroupsListForm">
+            <input type="text" wicket:id="name" style="display: table-cell"/>
+            <input type="text" wicket:id="description" style="display: table-cell"/>
+            <input type="submit" wicket:id="deleteButton" value="Delete" style="display: table-cell"/>
+            </form>
+          </div>
+      </div>
+      <div wicket:id="functionalPermissionsGroupsListNavigator"/>
+    </wicket:panel>
+  </body>
+</html>

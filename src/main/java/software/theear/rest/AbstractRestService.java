@@ -13,9 +13,9 @@ import org.wicketstuff.rest.resource.MethodMappingInfo;
 import org.wicketstuff.restutils.wicket.AttributesWrapper;
 
 import jakarta.servlet.http.HttpServletRequest;
-import software.theear.auth.OidcUser;
-import software.theear.auth.OneOfRequiredFunctionalPermissions;
-import software.theear.auth.RequiredFunctionalPermissions;
+import software.theear.service.auth.OidcUser;
+import software.theear.service.auth.OneOfRequiredFunctionalPermissions;
+import software.theear.service.auth.RequiredFunctionalPermissions;
 
 /** Base class for Wicketstuff'ed rest services.
  * 

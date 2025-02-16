@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+  <entry key="name">Functional permission group name</entry>
+  <entry key="description">Description</entry>
+  <entry key="newName">Name of new permission group</entry>
+</properties>
