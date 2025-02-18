@@ -2,7 +2,7 @@ package software.theear.ui.auth;
 
 import java.util.LinkedList;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.list.ListItem;
@@ -17,6 +17,13 @@ public class FunctionalPermissionGroupDetailsPanel extends Panel {
 
   public FunctionalPermissionGroupDetailsPanel(@Nonnull String id, @Nonnull FunctionalPermissionGroup FPGroup) {
     super(id);
+    
+    // Name text field
+    // Description text area
+    // Save button
+    // Delete button (and go back to overview panel
+    // Functional permissions (with checkbox to assign / remove)
+    // List assigned oidc roles?
     
     add(new ListView<FunctionalPermission>("functionalPermissions", new LinkedList<FunctionalPermission>(FPGroup.AssignedFunctionalPermissions)) {
       private static final long serialVersionUID = 7595827256754906532L;

@@ -19,7 +19,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.wicket.authroles.authorization.strategies.role.annotations.AuthorizeAction;
@@ -410,7 +410,7 @@ import software.theear.service.user.UserprofileRepository;
    * @param Group The functional permission group whose information to update.
    * @return {@code true} if the update was successful.
    */
-  void _update(@Nonnull FunctionalPermissionGroup Group) {
+  public void update(@Nonnull FunctionalPermissionGroup Group) {
     log.debug("Update functional permission group {}", Group);
     try {
       String[] v = DatabaseService.scheduleTransaction((Conn) -> {
@@ -483,6 +483,7 @@ import software.theear.service.user.UserprofileRepository;
     FunctionalPermissionGroup fpg = this.m_FunctionalPermissionGroups.get(FunctionalPermissionGroupID);
     if (null != fpg) {
       // FIXME: implement!
+      System.out.println("DELETE FUNCTIONAL PERMISSION");
       EBDeletedFunctionalPermissionGroup.GET.send(this.m_FunctionalPermissionGroups.get(FunctionalPermissionGroupID));
     }
   }

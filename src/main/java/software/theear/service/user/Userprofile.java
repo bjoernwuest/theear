@@ -3,7 +3,7 @@ package software.theear.service.user;
 import java.time.Instant;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 public final class Userprofile {
   public final UUID UserID;

@@ -6,7 +6,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 /** Group of functional permissions.
  * 
@@ -44,7 +44,7 @@ public final class FunctionalPermissionGroup {
    */
   public FunctionalPermissionGroup Name(@Nonnull String NewName) {
     this.m_Name = NewName;
-    this.m_Repo._update(this);
+    this.m_Repo.update(this);
     return this;
   }
   void _Name(@Nonnull String NewName) { this.m_Name = NewName; }
@@ -60,7 +60,7 @@ public final class FunctionalPermissionGroup {
    */
   public FunctionalPermissionGroup Description(@Nonnull String NewDescription) {
     this.m_Description = NewDescription;
-    this.m_Repo._update(this);
+    this.m_Repo.update(this);
     return this;
   }
   void _Description(@Nonnull String NewDescription) { this.m_Description = NewDescription; }

@@ -17,3 +17,12 @@ public class Application {
     new SpringApplicationBuilder().sources(Application.class).run(Args);
   }
 }
+
+// FIXME: later readings
+// https://www.coderdreams.com/wicket-autocomplete-components-with-remote-data/
+// https://www.coderdreams.com/adding-fuzzy-search-to-wicket-autocomplete-components/
+// https://www.coderdreams.com/how-to-use-wicket-component-events/
+// https://www.coderdreams.com/creating-single-click-buttons-with-wicket/
+// https://www.coderdreams.com/understanding-wicket-models/
+// https://www.coderdreams.com/basics-of-wicket-ajax-requests/
+// 
