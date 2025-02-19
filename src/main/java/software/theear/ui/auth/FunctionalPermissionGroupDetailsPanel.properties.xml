@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
-  <entry key="functionalPermissionName">Functional permission name</entry>
+  <entry key="name">Name of permission group</entry>
   <entry key="description">Description</entry>
+  
+  <entry key="duplicateName">The name is used for another functional permission group already.</entry>
+  <entry key="emptyName">Functional permission group must have a valid name.</entry>
+  
+  <entry key="functionalPermissionAssigned">Assigned</entry>
+  <entry key="functionalPermissionName">Functional permission name</entry>
   <entry key="knownSince">Known since</entry>
   <entry key="lastDetected">Last detected</entry>
 </properties>

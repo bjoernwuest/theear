@@ -39,10 +39,10 @@ import software.theear.service.auth.OidcUser;
     @AuthorizeInstantiation({FunctionalPermissionGroupOverviewPanel.read, FunctionalPermissionGroupOverviewPanel.edit})
 })
 public class FunctionalPermissionGroupOverviewPanel extends Panel {
-  private final static String read = "readFunctionalPermissionGroup";
-  private final static String create = "createFunctionalPermissionGroup";
-  private final static String delete = "deleteFunctionalPermissionGroup";
-  private final static String edit = "editFunctionalPermissionGroup";
+  final static String read = "readFunctionalPermissionGroup";
+  final static String create = "createFunctionalPermissionGroup";
+  final static String delete = "deleteFunctionalPermissionGroup";
+  final static String edit = "editFunctionalPermissionGroup";
   private static final long serialVersionUID = -6842093369143884412L;
   
   /** Model to manage functional permission groups.
@@ -92,12 +92,14 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
       private static final long serialVersionUID = 2275603002457204186L;
 
       @Override public void onSubmit() {
-        if (null != AuthorizationService.getInstance().createFunctionalPermissionGroup(newFunctionalPermissionGroupNameInput.getValue(), "")) {
-          newFunctionalPermissionGroupNameInput.setModel(Model.of(""));
-          // TODO: display "success message"
-        };
+        if (canCreate) {
+          if (null != AuthorizationService.getInstance().createFunctionalPermissionGroup(newFunctionalPermissionGroupNameInput.getValue(), "")) {
+            newFunctionalPermissionGroupNameInput.setModel(Model.of(""));
+            // TODO: display "success message"
+          };
+        }
       }
-    };
+    }.setEnabled(canCreate);
     
     newFunctionalPermissionGroupNameInput.add(new AjaxEventBehavior("input") {
       private static final long serialVersionUID = -3803444692177149506L;
@@ -124,12 +126,8 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
       }
     });
     
-    newFunctionalPermissionGroupForm.add(createStatusLabel);
-    newFunctionalPermissionGroupForm.add(newFunctionalPermissionGroupNameInput);
-    newFunctionalPermissionGroupForm.add(newButton);
+    newFunctionalPermissionGroupForm.add(createStatusLabel, newFunctionalPermissionGroupNameInput, newButton).setEnabled(canCreate).setVisible(canCreate);
     add(newFunctionalPermissionGroupForm);
-    // Disable and hide for if user has insufficient permissions
-    if (!canCreate) { newFunctionalPermissionGroupForm.setEnabled(false).setVisible(false); }
     
     PageableListView<FunctionalPermissionGroup> pageableFunctionalPermissionGroupListView = new PageableListView<>("functionalPermissionGroupsList", new FunctionalPermissionGroupModel(), 3) { // FIXME: make the "3" a parameter for the number of pages
       private static final long serialVersionUID = 1786621734119480353L;
@@ -145,15 +143,19 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
         Component saveButton = new Button("saveUpdateButton") {
           private static final long serialVersionUID = -6940725764526359969L;
           @Override public void onSubmit() {
-            // Update the functional permission group with the latest information in the form
-            if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().update(item.getModel().getObject()); }
+            if (canEdit) {
+              // Update the functional permission group with the latest information in the form
+              if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().update(item.getModel().getObject()); }
+            }
           }
         }.setEnabled(false).setVisible(canEdit);
         
         Component deleteButton = new Button("deleteButton") {
           private static final long serialVersionUID = 6357184943404360143L;
           @Override public void onSubmit() {
-            if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().deleteFunctionalPermissionGroup(item.getModel().getObject().FunctionalPermissionGroupID); }
+            if (canDelete) {
+              if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().deleteFunctionalPermissionGroup(item.getModel().getObject().FunctionalPermissionGroupID); }
+            }
           }
         }.setDefaultFormProcessing(false).setEnabled(canDelete).setVisible(canDelete);
         
@@ -166,23 +168,25 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
         }).add(new AjaxEventBehavior("input") { // Add behavior to react on FPG name change
           private static final long serialVersionUID = -3054092690482757698L;
           @Override protected void onEvent(AjaxRequestTarget target) {
-            if (this.getComponent() instanceof TextField tf) {
-              // Enable or disable "saveButton" depending on FPG name
-              if (1 > tf.getInput().length()) {
-                saveButton.setEnabled(false);
-                localNotificationLabel.setDefaultModelObject(localNotificationLabel.getString("duplicateName", localNotificationLabel.getDefaultModel(), "The name is used for another functional permission group already."));
-              } else if (tf.getInput().equalsIgnoreCase(tf.getValue())) {
-                saveButton.setEnabled(false);
-                localNotificationLabel.setDefaultModelObject("");
-              } else if (AuthorizationService.getInstance().getAllFunctionalPermissionGroups().stream().anyMatch(e -> e.Name().equalsIgnoreCase(tf.getInput()))) {
-                saveButton.setEnabled(false);
-                localNotificationLabel.setDefaultModelObject(localNotificationLabel.getString("emptyName", localNotificationLabel.getDefaultModel(), "Functional permission group must have a valid name."));
-              } else {
-                saveButton.setEnabled(canEdit);
-                localNotificationLabel.setDefaultModelObject("");
+            if (canEdit) {
+              if (this.getComponent() instanceof TextField tf) {
+                // Enable or disable "saveButton" depending on FPG name
+                if (1 > tf.getInput().length()) {
+                  saveButton.setEnabled(false);
+                  localNotificationLabel.setDefaultModelObject(localNotificationLabel.getString("emptyName", localNotificationLabel.getDefaultModel(), "Functional permission group must have a valid name."));
+                } else if (tf.getInput().equalsIgnoreCase(tf.getValue())) {
+                  saveButton.setEnabled(canEdit); // Enable save of description
+                  localNotificationLabel.setDefaultModelObject("");
+                } else if (AuthorizationService.getInstance().getAllFunctionalPermissionGroups().stream().anyMatch(e -> e.Name().equalsIgnoreCase(tf.getInput()))) {
+                  saveButton.setEnabled(false);
+                  localNotificationLabel.setDefaultModelObject(localNotificationLabel.getString("duplicateName", localNotificationLabel.getDefaultModel(), "The name is used for another functional permission group already."));
+                } else {
+                  saveButton.setEnabled(canEdit);
+                  localNotificationLabel.setDefaultModelObject("");
+                }
+                target.add(saveButton); // Add saveButton for "re-rendering"
+                target.add(localNotificationLabel); // Add local notification label for re-rendering
               }
-              target.add(saveButton); // Add saveButton for "re-rendering"
-              target.add(localNotificationLabel); // Add local notification label for re-rendering
             }
           }
         }).setEnabled(canEdit);
@@ -190,15 +194,14 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
         Component descriptionTF = new TextField<String>("description", new IModel<String>() {
           private static final long serialVersionUID = -8595036776263395161L;
           @Override public String getObject() { return item.getModel().getObject().Description(); }
-          @Override public void setObject(String Description) { item.getModel().getObject().Description(Description); }
+          @Override public void setObject(String Description) { if (canEdit) { item.getModel().getObject().Description(Description); } }
         }).setEnabled(canEdit);
         item.add(new Link<String>("linkToDetailPanel") {
           private static final long serialVersionUID = 1L;
-          @Override public void onClick() { m_THIS.replaceWith(new FunctionalPermissionGroupDetailsPanel(m_THIS.getId(), item.getModel().getObject())); }
-        }).add(functionalPermissionGroupForm.add(nameTF).add(localNotificationLabel).add(descriptionTF).add(saveButton).add(deleteButton));
+          @Override public void onClick() { m_THIS.replaceWith(new FunctionalPermissionGroupDetailsPanel(m_THIS.getId(), item.getModel().getObject().FunctionalPermissionGroupID)); }
+        }).add(functionalPermissionGroupForm.add(nameTF, localNotificationLabel, descriptionTF, saveButton, deleteButton));
       }
     };
-    add(pageableFunctionalPermissionGroupListView);
-    add(new PagingNavigator("functionalPermissionsGroupsListNavigator", pageableFunctionalPermissionGroupListView));
+    add(pageableFunctionalPermissionGroupListView, new PagingNavigator("functionalPermissionsGroupsListNavigator", pageableFunctionalPermissionGroupListView));
   }
 }

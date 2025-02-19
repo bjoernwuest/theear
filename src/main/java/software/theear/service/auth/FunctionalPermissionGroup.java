@@ -12,7 +12,7 @@ import jakarta.annotation.Nonnull;
  * 
  * @author bjoern@liwuest.net
  */
-public final class FunctionalPermissionGroup {
+public final class FunctionalPermissionGroup implements Comparable<FunctionalPermissionGroup> {
   private final AuthorizationService m_Repo;
   transient final Set<FunctionalPermission> _AssignedFunctionalPermissions = new TreeSet<>();
   /** Unique technical identifier of this functional permission group. */
@@ -74,4 +74,9 @@ public final class FunctionalPermissionGroup {
    * @param PermissionToRevoke The functional permission to revoke.
    */
   public void revoke(@Nonnull FunctionalPermission PermissionToRevoke) { this.m_Repo.revoke(PermissionToRevoke, this.m_Repo.getFunctionalPermissionGroup(this.FunctionalPermissionGroupID).get()); }
+
+  @Override public int compareTo(FunctionalPermissionGroup o) {
+    if (null == o) return 1;
+    return this.FunctionalPermissionGroupID.compareTo(o.FunctionalPermissionGroupID);
+  }
 }

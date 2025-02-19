@@ -2,18 +2,30 @@
   <head></head>
   <body>
     <wicket:panel>
+      <form wicket:id="functionalPermissionGroupForm">
+        <wicket:message key="name">Group name</wicket:message>
+        <input type="text" wicket:id="nameInput"/>
+        <div wicket:id="nameStatusLabel"/>
+        <input type="text" wicket:id="description"/>
+        <input type="submit" wicket:id="saveButton" value="Save"/>
+        <input type="submit" wicket:id="deleteButton" value="Delete"/>
+      </form>
       <div style="display: table;">
         <div style="display: table-header-group;">
+          <div style="display: table-cell"><wicket:message key="functionalPermissionAssigned">Assigned</wicket:message></div>
           <div style="display: table-cell"><wicket:message key="functionalPermissionName">Functional permission name</wicket:message></div>
           <div style="display: table-cell"><wicket:message key="description">Description</wicket:message></div>
           <div style="display: table-cell"><wicket:message key="knownSince">Known since</wicket:message></div>
           <div style="display: table-cell"><wicket:message key="lastDetected">Last detected</wicket:message></div>
         </div>
         <div wicket:id="functionalPermissions" style="display: table-row;">
+          <form>
+            <input type="checkbox" wicket:id="functionalPermissionAssigned" style="display: table-cell"/>
+          </form>
           <div wicket:id="functionalPermissionName" style="display: table-cell"></div>
-          <div wicket:id="description" style="display: table-cell"></div>
-          <div wicket:id="knownSince" style="display: table-cell"></div>
-          <div wicket:id="lastDetected" style="display: table-cell"></div>
+          <div wicket:id="functionalPermissionDescription" style="display: table-cell"></div>
+          <div wicket:id="functionalPermissionKnownSince" style="display: table-cell"></div>
+          <div wicket:id="functionalPermissionLastDetected" style="display: table-cell"></div>
         </div>
       </div>
     </wicket:panel>

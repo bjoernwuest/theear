@@ -18,7 +18,7 @@ import org.apache.wicket.util.lang.Objects;
  * 
  * @author bjoern@liwuest.net
  */
-public final class FunctionalPermission {
+public final class FunctionalPermission implements Comparable<FunctionalPermission> {
   /** The Java operation where the functional permission was seen at. */
   public final static class FunctionalPermissionSource {
     /** The Java type this functional permission was seen at. */
@@ -67,5 +67,10 @@ public final class FunctionalPermission {
     this.PermissionDescription = PermissionDescription;
     this.CreatedAt = CreatedAt;
     this.LastSeenAt = LastSeenAt;
+  }
+
+  @Override public int compareTo(FunctionalPermission o) {
+    if (null == o) return 1;
+    return this.FunctionalPermissionID.compareTo(o.FunctionalPermissionID);
   }
 }
