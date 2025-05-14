@@ -38,14 +38,14 @@ public final class OidcUser extends DefaultOidcUser {
   /** Flag to indicate the the user is a root user. This can be revoked only when the user logs out and logs in again. */
   public final boolean isRoot;
   /** The ID of the user profile to this authenticated user. */
-  private final UUID UserID;
+  public final UUID UserID;
   /** When this user was first seen by the application. */
   public final Instant CreatedAt;
   /** When this user was last seen by the application. Users not seen for a long time are an indication for inactive users. */
   public final Instant LastSeenAt;
   
   /** Permissions of the user. This member is using lazy-loading from data base as well as timed expiration. The timed expiration means that changes in permission assignment are reflected also to logged in users after a certain amount of time. */
-  private final FixedExpirationWeakReference<Collection<String>> m_Permissions = new FixedExpirationWeakReference<>(() -> {
+  transient private final FixedExpirationWeakReference<Collection<String>> m_Permissions = new FixedExpirationWeakReference<>(() -> {
     log.trace("Load permissions from data base");
     Collection<String> result = new TreeSet<>();
     try {

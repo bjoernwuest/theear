@@ -17,9 +17,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import jakarta.annotation.Nonnull;
+import java.util.concurrent.Future;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.wicket.authroles.authorization.strategies.role.annotations.AuthorizeAction;
@@ -46,10 +46,13 @@ import org.springframework.stereotype.Service;
 
 import com.google.common.reflect.ClassPath;
 
+import jakarta.annotation.Nonnull;
 import software.theear.Application;
 import software.theear.SystemExitReasons;
 import software.theear.service.auth.FunctionalPermission.FunctionalPermissionSource;
 import software.theear.service.data.DatabaseService;
+import software.theear.service.data.NamedPreparedStatement;
+import software.theear.service.data.NamedPreparedStatement.ConnectedNamedPreparedStatement;
 import software.theear.service.user.Userprofile;
 import software.theear.service.user.UserprofileRepository;
 
@@ -82,6 +85,8 @@ import software.theear.service.user.UserprofileRepository;
   
   
   /** Eventually persist functional permission if it does not exist in data base.
+   * 
+   * This is a blocking operation.
    * 
    * @param PermissionName The actual name of the permission.
    * @param PermissionAction The action linked to the permission. Primarily for {@link org.apache.wicket.authorization.Action}.
@@ -190,6 +195,8 @@ import software.theear.service.user.UserprofileRepository;
   
   /** Reads the functional permissions from data base and stores them in memory.
    * 
+   * This is a blocking operation.
+   * 
    * @throws ExecutionException if there is any problem in processing the function. Most likely nested exception knows more.
    * @throws InterruptedException indicates that for whatever reason this function was aborted. Most likely due to shutdown request.
    */
@@ -236,7 +243,7 @@ import software.theear.service.user.UserprofileRepository;
    */
   private void m_ReadFunctionalPermissionToGroupsAssignmentFromDatabase() throws ExecutionException, InterruptedException {
     DatabaseService.scheduleTransaction((Conn) -> {
-      try (Statement stmt = Conn.createStatement(); ResultSet rSet = stmt.executeQuery("SELECT perm_group_id, perm_id FROM auth_functional_permission_groups_permissions")) {
+      try (Statement stmt = Conn.createStatement(); ResultSet rSet = stmt.executeQuery("SELECT perm_group_id, perm_id FROM auth_functional_permission_groups_permissions WHERE deleted_at IS NULL ORDER BY row_version DESC LIMIT 1")) {
         while (rSet.next()) {
           FunctionalPermissionGroup fpg = m_FunctionalPermissionGroups.get(rSet.getObject(1, UUID.class));
           FunctionalPermission fp = m_FunctionalPermissions.get(rSet.getObject(2, UUID.class));
@@ -380,6 +387,8 @@ import software.theear.service.user.UserprofileRepository;
   
   /** Resolve group of identity issuer to readable group name and persist in data base.
    * 
+   * This is a blocking operation.
+   * 
    * @param Issuer The issuer of the identity.
    * @param GroupID The group identifier from the issuer.
    * @return Authority object that can be validated against.
@@ -412,24 +421,20 @@ import software.theear.service.user.UserprofileRepository;
    */
   public void update(@Nonnull FunctionalPermissionGroup Group) {
     log.debug("Update functional permission group {}", Group);
-    try {
-      String[] v = DatabaseService.scheduleTransaction((Conn) -> {
-        try (PreparedStatement pStmt = Conn.prepareStatement("UPDATE auth_functional_permission_groups SET perm_group_name = ?, perm_group_description = ? WHERE perm_group_id = ? RETURNING perm_group_name, perm_group_description")) {
-          pStmt.setString(1, Group.Name());
-          pStmt.setString(2, Group.Description());
-          pStmt.setObject(3, Group.FunctionalPermissionGroupID);
-          try (ResultSet rSet = pStmt.executeQuery()) {
-            rSet.next();
-            EBFunctionalPermissionGroupUpdate.GET.send(Group.FunctionalPermissionGroupID);
-            return new String[] {rSet.getString(1), rSet.getString(2)};
-          }
+    DatabaseService.scheduleTransaction((Conn) -> {
+      try (PreparedStatement pStmt = Conn.prepareStatement("UPDATE auth_functional_permission_groups SET perm_group_name = ?, perm_group_description = ? WHERE perm_group_id = ? RETURNING perm_group_name, perm_group_description")) {
+        pStmt.setString(1, Group.Name());
+        pStmt.setString(2, Group.Description());
+        pStmt.setObject(3, Group.FunctionalPermissionGroupID);
+        try (ResultSet rSet = pStmt.executeQuery()) {
+          rSet.next();
+          Group._Name(rSet.getString(1));
+          Group._Description(rSet.getString(2));
+          EBFunctionalPermissionGroupUpdate.GET.send(Group.FunctionalPermissionGroupID);
+          return null;
         }
-      }).get();
-      Group._Name(v[0]);
-      Group._Description(v[1]);
-      EBFunctionalPermissionGroupUpdate.GET.send(Group.FunctionalPermissionGroupID);
-    } catch (ExecutionException Ex) { log.warn("Could not update information on functional permission group. See exception for details. Application continues.", Ex); }
-    catch (InterruptedException Ignore) { /* simple wait */ }
+      }
+    });
   }
   
   /** Returns functional permission, if found. Otherwise, the returned {@link Optional} may contain {@code null}.
@@ -449,27 +454,30 @@ import software.theear.service.user.UserprofileRepository;
   
   /** Create a new functional permission group.
    * 
+   * This function is blocking.
+   * 
    * @param Name The name of the functional permission group to create.
    * @param Description The description text of the functional permission.
    * @return Reference to the functional permission, or {@code null} if there was any problem.
    */
-  public FunctionalPermissionGroup createFunctionalPermissionGroup(String Name, String Description) {
+  public FunctionalPermissionGroup createFunctionalPermissionGroup(@Nonnull String Name, @Nonnull String Description, @Nonnull UUID UserID) {
     synchronized (this.m_FunctionalPermissionGroups) {
       return this.m_FunctionalPermissionGroups.values().stream().filter(fpg -> fpg.Name().equalsIgnoreCase(Name.trim())).findAny().orElseGet(() -> {
         try {
           FunctionalPermissionGroup result = DatabaseService.scheduleTransaction(Conn -> {
-            try (PreparedStatement pStmt = Conn.prepareStatement("INSERT INTO auth_functional_permission_groups (perm_group_name, perm_group_description) VALUES (?, ?) ON CONFLICT (perm_group_name) DO NOTHING RETURNING perm_group_id, created_at")) {
+            try (PreparedStatement pStmt = Conn.prepareStatement("INSERT INTO auth_functional_permission_groups (perm_group_name, perm_group_description, created_by) VALUES (?, ?, ?) ON CONFLICT (perm_group_name) DO NOTHING RETURNING perm_group_id, created_at")) {
               pStmt.setString(1,  Name);
               pStmt.setString(2,  Description);
+              pStmt.setObject(3, UserID);
               try (ResultSet rSet = pStmt.executeQuery()) {
                 rSet.next();
                 FunctionalPermissionGroup fpg = new FunctionalPermissionGroup(getInstance(), rSet.getObject(1, UUID.class), Name, Description, rSet.getTimestamp(2).toInstant());
                 this.m_FunctionalPermissionGroups.put(fpg.FunctionalPermissionGroupID, fpg);
+                EBNewFunctionalPermissionGroup.GET.send(fpg);
                 return fpg;
               }
             }
           }).get();
-          EBNewFunctionalPermissionGroup.GET.send(result);
           return result;
         } catch (Exception Ex) {
           log.warn("Failed to create functional permission group in data base. See exeption for details.", Ex);
@@ -507,18 +515,62 @@ import software.theear.service.user.UserprofileRepository;
    * 
    * @param FunctionalPermission The functional permission to actually grant.
    * @param FunctionalPermissionGroup The functional permission group whom to grant for.
+   * @return Future that will be fulfilled once assignment took place. The value is {@code true} if the assignment took place, or {@code false} if the assignment was already present.
    */
-  public void grant(@Nonnull FunctionalPermission FunctionalPermission, @Nonnull FunctionalPermissionGroup FunctionalPermissionGroup) {
+  public Future<Boolean> grant(@Nonnull FunctionalPermission FunctionalPermission, @Nonnull FunctionalPermissionGroup FunctionalPermissionGroup, @Nonnull UUID UserID) {
     if (FunctionalPermissionGroup._AssignedFunctionalPermissions.add(FunctionalPermission) && FunctionalPermission._AssignedFunctionalPermissionGroups.add(FunctionalPermissionGroup)) {
-      DatabaseService.scheduleTransaction((Conn) -> {
-        try (PreparedStatement pStmt = Conn.prepareStatement("INSERT INTO auth_functional_permission_groups_permissions (perm_group_id, perm_id) VALUES (?, ?) ON CONFLICT (perm_group_id, perm_id) DO NOTHING")) {
+      return DatabaseService.scheduleTransaction((Conn) -> {
+        try (ConnectedNamedPreparedStatement pStmt = new NamedPreparedStatement("""
+          WITH helper AS (
+            WITH empty_table AS (SELECT)
+            SELECT
+              perm_group_id,
+              perm_id,
+              CASE WHEN row_version IS NULL THEN 1 ELSE
+                CASE WHEN deleted_at IS NULL THEN row_version ELSE row_version+1 END
+              END AS row_version
+            FROM empty_table LEFT JOIN
+              (SELECT perm_group_id, perm_id, row_version, deleted_at FROM auth_functional_permission_groups_permissions WHERE perm_group_id = :pgi AND perm_id = :pi ORDER BY row_version DESC LIMIT 1)
+              ON perm_group_id = :pgi AND perm_id = :pi)
+          INSERT INTO auth_functional_permission_groups_permissions (perm_group_id, perm_id, row_version, created_by) SELECT :pgi, :pi, row_version, :cb FROM helper ON CONFLICT (perm_group_id, perm_id, row_version) DO NOTHING
+          """).open(Conn)) {
+          pStmt.setObject("pgi", FunctionalPermissionGroup.FunctionalPermissionGroupID);
+          pStmt.setObject("pi", FunctionalPermission.FunctionalPermissionID);
+          pStmt.setObject("cb", UserID);
+          pStmt.execute();
+          if (0 != pStmt.getUpdateCount()) EBFunctionalPermissionGranted.GET.send(new ImmutablePair<>(FunctionalPermission, FunctionalPermissionGroup));
+          return 0 != pStmt.getUpdateCount();
+        }
+/*        try (PreparedStatement pStmt = Conn.prepareStatement("""
+          WITH helper AS (
+            WITH empty_table AS (SELECT)
+            SELECT
+              perm_group_id,
+              perm_id,
+              CASE WHEN row_version IS NULL THEN 1 ELSE
+                CASE WHEN deleted_at IS NULL THEN row_version ELSE row_version+1 END
+              END AS row_version
+            FROM empty_table LEFT JOIN
+              (SELECT perm_group_id, perm_id, row_version, deleted_at FROM auth_functional_permission_groups_permissions WHERE perm_group_id = ? AND perm_id = ? ORDER BY row_version DESC LIMIT 1)
+              ON perm_group_id = ? AND perm_id = ?)
+          INSERT INTO auth_functional_permission_groups_permissions (perm_group_id, perm_id, row_version, created_by) SELECT ?, ?, row_version, ? FROM helper ON CONFLICT (perm_group_id, perm_id, row_version) DO NOTHING""")) {
           pStmt.setObject(1, FunctionalPermissionGroup.FunctionalPermissionGroupID);
           pStmt.setObject(2, FunctionalPermission.FunctionalPermissionID);
+          pStmt.setObject(3, FunctionalPermissionGroup.FunctionalPermissionGroupID);
+          pStmt.setObject(4, FunctionalPermission.FunctionalPermissionID);
+          pStmt.setObject(5, FunctionalPermissionGroup.FunctionalPermissionGroupID);
+          pStmt.setObject(6, FunctionalPermission.FunctionalPermissionID);
+          if (Session.get() instanceof AuthenticatedSession as) pStmt.setObject(7, as.getUser().UserID);
+          else pStmt.setObject(7, 0, 0));
           pStmt.execute();
-        }
-        return null;
+          EBFunctionlPermissionGranted.GET.send(new ImmutablePair<>(FunctionalPermission, FunctionalPermissionGroup));
+          return 0 != pStmt.getUpdateCount();
+        }*/
       });
-      EBFunctionlPermissionGranted.GET.send(new ImmutablePair<>(FunctionalPermission, FunctionalPermissionGroup));
+    } else {
+      CompletableFuture<Boolean> cf = new CompletableFuture<>();
+      cf.complete(false);
+      return cf;
     }
   }
   
@@ -527,17 +579,178 @@ import software.theear.service.user.UserprofileRepository;
    * @param FunctionalPermission The functional permission to revoke.
    * @param FunctionalPermissionGroup The functional permission group to revoke from.
    */
-  public void revoke(@Nonnull FunctionalPermission FunctionalPermission, @Nonnull FunctionalPermissionGroup FunctionalPermissionGroup) {
+  public Future<Boolean> revoke(@Nonnull FunctionalPermission FunctionalPermission, @Nonnull FunctionalPermissionGroup FunctionalPermissionGroup, @Nonnull UUID UserID) {
     if (FunctionalPermissionGroup._AssignedFunctionalPermissions.remove(FunctionalPermission) || FunctionalPermission._AssignedFunctionalPermissionGroups.remove(FunctionalPermissionGroup)) {
-      DatabaseService.scheduleTransaction((Conn) -> {
-        try (PreparedStatement pStmt = Conn.prepareStatement("DELETE FROM auth_functional_permission_groups_permissions WHERE perm_group_id = ? AND perm_id = ?")) {
+      return DatabaseService.scheduleTransaction((Conn) -> {
+        try (ConnectedNamedPreparedStatement pStmt = new NamedPreparedStatement("""
+          WITH helper AS (
+            WITH empty_table AS (SELECT)
+            SELECT
+              perm_group_id,
+              perm_id,
+              CASE WHEN row_version IS NULL THEN 1 ELSE
+                CASE WHEN deleted_at IS NULL THEN row_version ELSE row_version+1 END
+              END AS row_version
+            FROM empty_table LEFT JOIN
+              (SELECT perm_group_id, perm_id, row_version, deleted_at FROM auth_functional_permission_groups_permissions WHERE perm_group_id = :pgi AND perm_id = :pi ORDER BY row_version DESC LIMIT 1)
+              ON perm_group_id = :pgi AND perm_id = :pi)
+          UPDATE auth_functional_permission_groups_permissions tab SET deleted_at = now(), deleted_by = :db FROM helper WHERE tab.perm_group_id = :pgi AND tab.perm_id = :pi AND tab.row_version = helper.row_version AND tab.deleted_at IS NULL
+          """).open(Conn)) {
+          pStmt.setObject("pgi", FunctionalPermissionGroup.FunctionalPermissionGroupID);
+          pStmt.setObject("pi", FunctionalPermission.FunctionalPermissionID);
+          // FIXME: get UserID from function parameter
+          pStmt.setObject("db", UserID);
+          pStmt.execute();
+          if (0 != pStmt.getUpdateCount()) EBFunctionalPermissionRevoked.GET.send(new ImmutablePair<>(FunctionalPermission, FunctionalPermissionGroup));
+          return 0 != pStmt.getUpdateCount();
+        }
+/*        try (PreparedStatement pStmt = Conn.prepareStatement("""
+          WITH helper AS (
+            WITH empty_table AS (SELECT)
+            SELECT
+              perm_group_id,
+              perm_id,
+              CASE WHEN row_version IS NULL THEN 1 ELSE
+                CASE WHEN deleted_at IS NULL THEN row_version ELSE row_version+1 END
+              END AS row_version
+            FROM empty_table LEFT JOIN
+              (SELECT perm_group_id, perm_id, row_version, deleted_at FROM auth_functional_permission_groups_permissions WHERE perm_group_id = ? AND perm_id = ? ORDER BY row_version DESC LIMIT 1)
+              ON perm_group_id = ? AND perm_id = ?)
+          UPDATE auth_functional_permission_groups_permissions tab SET deleted_at = now(), deleted_by = ? FROM helper WHERE tab.perm_group_id = ? AND tab.perm_id = ? AND tab.row_version = helper.row_version AND tab.deleted_at IS NULL""")) {
           pStmt.setObject(1, FunctionalPermissionGroup.FunctionalPermissionGroupID);
           pStmt.setObject(2, FunctionalPermission.FunctionalPermissionID);
+          pStmt.setObject(3, FunctionalPermissionGroup.FunctionalPermissionGroupID);
+          pStmt.setObject(4, FunctionalPermission.FunctionalPermissionID);
+          if (Session.get() instanceof AuthenticatedSession as) pStmt.setObject(5, as.getUser().UserID);
+          else pStmt.setObject(5, new UUID(0, 0));
+          pStmt.setObject(6, FunctionalPermissionGroup.FunctionalPermissionGroupID);
+          pStmt.setObject(7, FunctionalPermission.FunctionalPermissionID);
           pStmt.execute();
+          EBFunctionalPermissionRevoked.GET.send(new ImmutablePair<>(FunctionalPermission, FunctionalPermissionGroup));
+          return 0 != pStmt.getUpdateCount();
+        }*/
+      });
+    } else {
+      CompletableFuture<Boolean> cf = new CompletableFuture<>();
+      cf.complete(false);
+      return cf;
+    }
+  }
+  
+  /** Return all known groups/roles from any IdP.
+   * 
+   * @param FunctionalPermissionGroup The functional permission group whose IdP groups/roles to return for.
+   * @return All known groups/roles from any IdP.
+   */
+  public LinkedList<OidcGroup> getOidcGroups() {
+    final LinkedList<OidcGroup> result = new LinkedList<>();
+    try {
+      DatabaseService.scheduleTransaction(Conn -> {
+        try (Statement stmt = Conn.createStatement(); ResultSet rSet = stmt.executeQuery("SELECT group_id, oidc_issuer, oidc_group_name, created_at FROM auth_oidc_groups")) {
+          while (rSet.next()) { result.add(new OidcGroup(rSet.getObject(1, UUID.class), rSet.getString(2), rSet.getString(3), rSet.getTimestamp(4).toInstant())); }
         }
         return null;
-      });
-      EBFunctionalPermissionRevoked.GET.send(new ImmutablePair<>(FunctionalPermission, FunctionalPermissionGroup));
-    }
+      }).get();
+    } catch (ExecutionException Ex) { log.warn("Could not retrieve the IdP roles. See exception for details. Application continues.", Ex); }
+    catch (InterruptedException Ignore) { /* simple wait */ }
+    return result;
+  }
+  
+  /** Return all groups/roles from any IdP assigned to the given functional permission group.
+   * 
+   * @param FunctionalPermissionGroupID The ID of the functional permission group whose IdP groups/roles to return for.
+   * @return All groups/roles from any IdP assigned to the given functional permission group.
+   */
+  public LinkedList<OidcGroup> getOidcGroups(@Nonnull UUID FunctionalPermissionGroupID) {
+    final LinkedList<OidcGroup> result = new LinkedList<>();
+    try {
+      DatabaseService.scheduleTransaction(Conn -> {
+        try (PreparedStatement pStmt = Conn.prepareStatement("SELECT t1.group_id, t1.oidc_issuer, t1.oidc_group_name, t1.created_at FROM auth_oidc_groups t1 INNER JOIN (SELECT group_id FROM auth_functional_permission_group_oidc_group_map WHERE perm_group_id = ? AND deleted_by IS NULL ORDER BY row_version DESC LIMIT 1) t2 ON t1.group_id = t2.group_id")) {
+          pStmt.setObject(1,  FunctionalPermissionGroupID);
+          try (ResultSet rSet = pStmt.executeQuery()) {
+            while (rSet.next()) { result.add(new OidcGroup(rSet.getObject(1, UUID.class), rSet.getString(2), rSet.getString(3), rSet.getTimestamp(4).toInstant())); }
+          }
+        }
+        return null;
+      }).get();
+    } catch (ExecutionException Ex) { log.warn("Could not retrieve the IdP roles assigned to the given functional permission group. See exception for details. Application continues.", Ex); }
+    catch (InterruptedException Ignore) { /* simple wait */ }
+    return result;
+  }
+  
+  /** Add group from identity provider to functional permission group.
+   * 
+   * @param Group The group from IdP to add.
+   * @param ToGroup The functional permission group to add to.
+   */
+  public void add(@Nonnull OidcGroup Group, @Nonnull FunctionalPermissionGroup ToGroup, @Nonnull UUID UserID) {
+    DatabaseService.scheduleTransaction(Conn -> {
+      try (ConnectedNamedPreparedStatement pStmt = new NamedPreparedStatement("""
+        WITH helper AS (
+          WITH empty_table AS (SELECT)
+          SELECT
+            perm_group_id,
+            group_id,
+            CASE WHEN row_version IS NULL THEN 1 ELSE
+              CASE WHEN deleted_at IS NULL THEN row_version ELSE row_version+1 END
+            END AS row_version
+          FROM empty_table LEFT JOIN
+            (SELECT perm_group_id, group_id, row_version, deleted_at FROM auth_functional_permission_group_oidc_group_map WHERE perm_group_id = :pgi AND group_id = :gi ORDER BY row_version DESC LIMIT 1)
+            ON perm_group_id = :pgi AND group_id = :gi)
+        INSERT INTO auth_functional_permission_group_oidc_group_map (perm_group_id, group_id, row_version, created_by) SELECT :pgi, :gi, row_version, :cb FROM helper ON CONFLICT (perm_group_id, group_id, row_version) DO NOTHING
+        """).open(Conn)) {
+        pStmt.setObject("pgi", ToGroup.FunctionalPermissionGroupID);
+        pStmt.setObject("gi", Group.GroupID);
+        pStmt.setObject("cb", UserID);
+        pStmt.execute();
+        if (0 < pStmt.getUpdateCount()) EBOidcGroupAssignedToFunctionalPermissionGroup.GET.send(new ImmutablePair<>(Group, ToGroup));
+        return 0 != pStmt.getUpdateCount();
+      }
+/*      try (PreparedStatement pStmt = Conn.prepareStatement("INSERT INTO auth_functional_permission_group_oidc_group_map (perm_group_id, group_id) VALUES (?, ?) ON CONFLICT (perm_group_id, group_id) DO NOTHING")) {
+        pStmt.setObject(1, ToGroup.FunctionalPermissionGroupID);
+        pStmt.setObject(2, Group.GroupID);
+        pStmt.execute();
+        if (0 < pStmt.getUpdateCount()) EBOidcGroupAssignedToFunctionalPermissionGroup.GET.send(new ImmutablePair<>(Group, ToGroup));
+      }
+      return null;*/
+    });
+  }
+  
+  /** Remove group from identity provider from functional permission group.
+   * 
+   * @param Group The group from IdP to remove.
+   * @param ToGroup The functional permission group to remove from.
+   */
+  public void remove(@Nonnull OidcGroup Group, @Nonnull FunctionalPermissionGroup FromGroup, @Nonnull UUID UserID) {
+    DatabaseService.scheduleTransaction(Conn -> {
+      try (ConnectedNamedPreparedStatement pStmt = new NamedPreparedStatement("""
+          WITH helper AS (
+            WITH empty_table AS (SELECT)
+            SELECT
+              perm_group_id,
+              group_id,
+              CASE WHEN row_version IS NULL THEN 1 ELSE
+                CASE WHEN deleted_at IS NULL THEN row_version ELSE row_version+1 END
+              END AS row_version
+            FROM empty_table LEFT JOIN
+              (SELECT perm_group_id, group_id, row_version, deleted_at FROM auth_functional_permission_group_oidc_group_map WHERE perm_group_id = :pgi AND group_id = :gi ORDER BY row_version DESC LIMIT 1)
+              ON perm_group_id = :pgi AND group_id = :gi)
+          UPDATE auth_functional_permission_group_oidc_group_map tab SET deleted_at = now(), deleted_by = :db FROM helper WHERE tab.perm_group_id = :pgi AND tab.group_id = :gi AND tab.row_version = helper.row_version AND tab.deleted_at IS NULL
+          """).open(Conn)) {
+          pStmt.setObject("pgi", FromGroup.FunctionalPermissionGroupID);
+          pStmt.setObject("gi", Group.GroupID);
+          pStmt.setObject("cb", UserID);
+          pStmt.execute();
+          if (0 != pStmt.getUpdateCount()) EBOidcGroupRemovedFromFunctionalPermissionGroup.GET.send(new ImmutablePair<>(Group, FromGroup));
+          return 0 != pStmt.getUpdateCount();
+        }
+/*      try (PreparedStatement pStmt = Conn.prepareStatement("DELETE FROM auth_functional_permission_group_oidc_group_map WHERE perm_group_id = ? AND group_id = ?")) {
+        pStmt.setObject(1, FromGroup.FunctionalPermissionGroupID);
+        pStmt.setObject(2, Group.GroupID);
+        pStmt.execute();
+        if (0 < pStmt.getUpdateCount()) EBOidcGroupRemovedFromFunctionalPermissionGroup.GET.send(new ImmutablePair<>(Group, FromGroup));
+      }
+      return null;*/
+    });
   }
 }

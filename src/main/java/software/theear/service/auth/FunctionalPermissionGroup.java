@@ -2,6 +2,7 @@ package software.theear.service.auth;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -67,16 +68,24 @@ public final class FunctionalPermissionGroup implements Comparable<FunctionalPer
   /** Grant given functional permission to this functional permission group.
    * 
    * @param PermissionToGrant The functional permission to grant.
+   * @param UserID The user issuing the grant.
    */
-  public void grant(@Nonnull FunctionalPermission PermissionToGrant) { this.m_Repo.grant(PermissionToGrant, this.m_Repo.getFunctionalPermissionGroup(this.FunctionalPermissionGroupID).get()); }
+  public void grant(@Nonnull FunctionalPermission PermissionToGrant, @Nonnull UUID UserID) { this.m_Repo.grant(PermissionToGrant, this.m_Repo.getFunctionalPermissionGroup(this.FunctionalPermissionGroupID).get(), UserID); }
   /** Revoke given functional permission from this functional permission group.
    * 
    * @param PermissionToRevoke The functional permission to revoke.
+   * @param UserID The user issuing the revoke.
    */
-  public void revoke(@Nonnull FunctionalPermission PermissionToRevoke) { this.m_Repo.revoke(PermissionToRevoke, this.m_Repo.getFunctionalPermissionGroup(this.FunctionalPermissionGroupID).get()); }
+  public void revoke(@Nonnull FunctionalPermission PermissionToRevoke, @Nonnull UUID UserID) { this.m_Repo.revoke(PermissionToRevoke, this.m_Repo.getFunctionalPermissionGroup(this.FunctionalPermissionGroupID).get(), UserID); }
 
   @Override public int compareTo(FunctionalPermissionGroup o) {
     if (null == o) return 1;
     return this.FunctionalPermissionGroupID.compareTo(o.FunctionalPermissionGroupID);
   }
+  
+  /** Return all groups/roles from any IdP assigned to this functional permission group.
+   * 
+   * @return All groups/roles from any IdP assigned to this functional permission group.
+   */
+  public LinkedList<OidcGroup> getOidcGroups() { return this.m_Repo.getOidcGroups(this.FunctionalPermissionGroupID); }
 }

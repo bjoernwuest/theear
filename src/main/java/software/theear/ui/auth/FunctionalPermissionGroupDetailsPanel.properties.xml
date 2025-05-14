@@ -11,4 +11,8 @@
   <entry key="functionalPermissionName">Functional permission name</entry>
   <entry key="knownSince">Known since</entry>
   <entry key="lastDetected">Last detected</entry>
+  
+  <entry key="oidcGroupAssigned">Assigned</entry>
+  <entry key="oidcGroupIssuer">Identity provider</entry>
+  <entry key="oidcGroupName">Group name</entry>
 </properties>

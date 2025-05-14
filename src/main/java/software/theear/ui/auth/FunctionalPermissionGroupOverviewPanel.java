@@ -7,13 +7,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.Nonnull;
-
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxEventBehavior;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.authroles.authorization.strategies.role.annotations.AuthorizeInstantiation;
 import org.apache.wicket.authroles.authorization.strategies.role.annotations.AuthorizeInstantiations;
+import org.apache.wicket.behavior.AttributeAppender;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.form.Button;
 import org.apache.wicket.markup.html.form.Form;
@@ -26,11 +25,16 @@ import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 
+import jakarta.annotation.Nonnull;
+import software.theear.service.auth.AuthenticatedSession;
 import software.theear.service.auth.AuthorizationService;
 import software.theear.service.auth.EBDeletedFunctionalPermissionGroup;
 import software.theear.service.auth.EBNewFunctionalPermissionGroup;
 import software.theear.service.auth.FunctionalPermissionGroup;
 import software.theear.service.auth.OidcUser;
+import software.theear.ui.HomePage;
+import software.theear.ui.HomePage.BackgroundJobFuture;
+import software.theear.ui.WicketTimedJob;
 
 @AuthorizeInstantiations(ruleset = {
     @AuthorizeInstantiation({FunctionalPermissionGroupOverviewPanel.read}), 
@@ -38,7 +42,7 @@ import software.theear.service.auth.OidcUser;
     @AuthorizeInstantiation({FunctionalPermissionGroupOverviewPanel.read, FunctionalPermissionGroupOverviewPanel.delete}),
     @AuthorizeInstantiation({FunctionalPermissionGroupOverviewPanel.read, FunctionalPermissionGroupOverviewPanel.edit})
 })
-public class FunctionalPermissionGroupOverviewPanel extends Panel {
+@SuppressWarnings("serial") public class FunctionalPermissionGroupOverviewPanel extends Panel {
   final static String read = "readFunctionalPermissionGroup";
   final static String create = "createFunctionalPermissionGroup";
   final static String delete = "deleteFunctionalPermissionGroup";
@@ -50,10 +54,7 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
    * The model just keeps the IDs of the functional permission groups and looks them up individually upon request. Subscriptions to {@link EBNewFunctionalPermissionGroup} and {@link EBDeletedFunctionalPermissionGroup} keep the list up to date.
    */
   private final static class FunctionalPermissionGroupModel implements IModel<List<FunctionalPermissionGroup>> {
-    private static final long serialVersionUID = -992790658583847524L;
-
     private final static class FunctionalPermissionGroupList extends AbstractList<FunctionalPermissionGroup> implements Serializable {
-      private static final long serialVersionUID = 3874351659133626347L;
       private final LinkedList<UUID> m_FunctionalPermissionGroupIDs = new LinkedList<>();
       
       private FunctionalPermissionGroupList() {
@@ -87,24 +88,45 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
     Form<Void> newFunctionalPermissionGroupForm = new Form<>("newFunctionalPermissionGroupForm");
     
     Component createStatusLabel = new Label("createStatusLabel", Model.of("")).setOutputMarkupId(true);
-    TextField<String> newFunctionalPermissionGroupNameInput = new TextField<>("createNameInput", Model.of("")); // TODO: add model that checks for duplicate names and shows warning!
+    TextField<String> newFunctionalPermissionGroupNameInput = new TextField<>("createNameInput", Model.of(""));
     Component newButton = new Button("createButton") {
-      private static final long serialVersionUID = 2275603002457204186L;
-
+      // Get reference to the button to be used in nested classes
+      private final Button m_THIS = this;
       @Override public void onSubmit() {
-        if (canCreate) {
-          if (null != AuthorizationService.getInstance().createFunctionalPermissionGroup(newFunctionalPermissionGroupNameInput.getValue(), "")) {
-            newFunctionalPermissionGroupNameInput.setModel(Model.of(""));
-            // TODO: display "success message"
-          };
+        if (canCreate && m_THIS.getPage() instanceof HomePage hp) {
+          // Disable button
+          this.setEnabled(false);
+          newFunctionalPermissionGroupNameInput.setEnabled(false);
+          // Get name of functional permission group and reset text field
+          String newGroupName = newFunctionalPermissionGroupNameInput.getValue();
+          // Schedule functional permission group creation for background execution
+          BackgroundJobFuture<Boolean> createFunctionalPermissionGroupInBackgroundJob = hp.runInBackground((Object... Args) -> {
+            final UUID userID =  (Args[0] instanceof AuthenticatedSession as) ? as.getUser().UserID : new UUID(0, 0);
+            if (null != AuthorizationService.getInstance().createFunctionalPermissionGroup(newGroupName, "", userID)) {
+              // TODO: display "success message"
+            };
+            return false;
+          }, m_THIS.getSession());
+          // Register for AJAX timed job to reenable button
+          hp.schedule(new WicketTimedJob() {
+            @Override public void execute(AjaxRequestTarget Target, long Run) {
+              // If the operation has been done, unregister this job and set button enablement status
+              if (createFunctionalPermissionGroupInBackgroundJob.isDone()) {
+                if (m_THIS.getPage() instanceof HomePage hp) { hp.unschedule(this); }
+                newFunctionalPermissionGroupNameInput.setModel(Model.of(""));
+                newFunctionalPermissionGroupNameInput.setEnabled(canCreate);
+                m_THIS.setEnabled(canCreate);
+                Target.add(m_THIS, newFunctionalPermissionGroupNameInput);
+              }
+            }
+          });
         }
       }
-    }.setEnabled(canCreate);
-    
+    }.setEnabled(canCreate).setVisible(canCreate);
+    // Status message and create button behavior depending on name of functional permission group
     newFunctionalPermissionGroupNameInput.add(new AjaxEventBehavior("input") {
-      private static final long serialVersionUID = -3803444692177149506L;
       @Override protected void onEvent(AjaxRequestTarget target) {
-        if (this.getComponent() instanceof TextField tf) {
+        if (canCreate && this.getComponent() instanceof TextField tf) {
           // Enable or disable button depending on name
           if (1 > tf.getInput().length()) {
             newButton.setEnabled(false);
@@ -120,53 +142,37 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
             createStatusLabel.setDefaultModelObject("");
           }
           // Add components that require re-rendering
-          target.add(newButton);
-          target.add(createStatusLabel);
+          target.add(newButton, createStatusLabel);
         }
       }
-    });
+    }).setEnabled(canCreate).setVisible(canCreate);
     
     newFunctionalPermissionGroupForm.add(createStatusLabel, newFunctionalPermissionGroupNameInput, newButton).setEnabled(canCreate).setVisible(canCreate);
     add(newFunctionalPermissionGroupForm);
     
     PageableListView<FunctionalPermissionGroup> pageableFunctionalPermissionGroupListView = new PageableListView<>("functionalPermissionGroupsList", new FunctionalPermissionGroupModel(), 3) { // FIXME: make the "3" a parameter for the number of pages
-      private static final long serialVersionUID = 1786621734119480353L;
-      
       @Override protected void onConfigure() {
         super.onConfigure();
         this.setVisible(!this.getList().isEmpty());
       }
 
       @Override protected void populateItem(ListItem<FunctionalPermissionGroup> item) {
+        item.add(new AttributeAppender("class", (item.getIndex() & 1) == 0 ? "even": "odd"));
+        
         Form<?> functionalPermissionGroupForm = new Form<>("functionalPermissionGroupsListForm");
         
-        Component saveButton = new Button("saveUpdateButton") {
-          private static final long serialVersionUID = -6940725764526359969L;
-          @Override public void onSubmit() {
-            if (canEdit) {
-              // Update the functional permission group with the latest information in the form
-              if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().update(item.getModel().getObject()); }
-            }
-          }
-        }.setEnabled(false).setVisible(canEdit);
+        Component saveButton = new Button("saveUpdateButton") { @Override public void onSubmit() { if (canEdit) { if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().update(item.getModel().getObject()); } } } }.setEnabled(false).setVisible(canEdit);
         
         Component deleteButton = new Button("deleteButton") {
-          private static final long serialVersionUID = 6357184943404360143L;
-          @Override public void onSubmit() {
-            if (canDelete) {
-              if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().deleteFunctionalPermissionGroup(item.getModel().getObject().FunctionalPermissionGroupID); }
-            }
-          }
+          @Override public void onSubmit() { if (canDelete) { if (null != item.getModel().getObject().FunctionalPermissionGroupID) { AuthorizationService.getInstance().deleteFunctionalPermissionGroup(item.getModel().getObject().FunctionalPermissionGroupID); } } }
         }.setDefaultFormProcessing(false).setEnabled(canDelete).setVisible(canDelete);
         
         Component localNotificationLabel = new Label("invalidName", Model.of("")).setOutputMarkupId(true);
         
         Component nameTF = new TextField<String>("name", new IModel<String>() {
-          private static final long serialVersionUID = 7733493013501344701L;
           @Override public String getObject() { return item.getModel().getObject().Name(); }
           @Override public void setObject(String Name) { item.getModel().getObject().Name(Name); }
         }).add(new AjaxEventBehavior("input") { // Add behavior to react on FPG name change
-          private static final long serialVersionUID = -3054092690482757698L;
           @Override protected void onEvent(AjaxRequestTarget target) {
             if (canEdit) {
               if (this.getComponent() instanceof TextField tf) {
@@ -192,14 +198,12 @@ public class FunctionalPermissionGroupOverviewPanel extends Panel {
         }).setEnabled(canEdit);
         
         Component descriptionTF = new TextField<String>("description", new IModel<String>() {
-          private static final long serialVersionUID = -8595036776263395161L;
           @Override public String getObject() { return item.getModel().getObject().Description(); }
           @Override public void setObject(String Description) { if (canEdit) { item.getModel().getObject().Description(Description); } }
         }).setEnabled(canEdit);
-        item.add(new Link<String>("linkToDetailPanel") {
-          private static final long serialVersionUID = 1L;
-          @Override public void onClick() { m_THIS.replaceWith(new FunctionalPermissionGroupDetailsPanel(m_THIS.getId(), item.getModel().getObject().FunctionalPermissionGroupID)); }
-        }).add(functionalPermissionGroupForm.add(nameTF, localNotificationLabel, descriptionTF, saveButton, deleteButton));
+        
+        item.add(new Link<String>("linkToDetailPanel") { @Override public void onClick() { m_THIS.replaceWith(new FunctionalPermissionGroupDetailsPanel(m_THIS.getId(), item.getModel().getObject().FunctionalPermissionGroupID)); } })
+          .add(functionalPermissionGroupForm.add(nameTF, localNotificationLabel, descriptionTF, saveButton, deleteButton));
       }
     };
     add(pageableFunctionalPermissionGroupListView, new PagingNavigator("functionalPermissionsGroupsListNavigator", pageableFunctionalPermissionGroupListView));

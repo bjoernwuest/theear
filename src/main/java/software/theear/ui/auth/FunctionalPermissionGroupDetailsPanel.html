@@ -28,6 +28,24 @@
           <div wicket:id="functionalPermissionLastDetected" style="display: table-cell"></div>
         </div>
       </div>
+      <div wicket:id="functionalPermissionsListNavigator"/>
+      <div style="display: table;">
+        <div style="display: table-header-group;">
+          <div style="display: table-cell"><wicket:message key="oidcGroupAssigned">Assigned</wicket:message></div>
+          <div style="display: table-cell"><wicket:message key="oidcGroupIssuer">Identity provider</wicket:message></div>
+          <div style="display: table-cell"><wicket:message key="oidcGroupName">Group name</wicket:message></div>
+          <div style="display: table-cell"><wicket:message key="knownSince">Known since</wicket:message></div>
+        </div>
+        <div wicket:id="oidcGroups" style="display: table-row;">
+          <form>
+            <input type="checkbox" wicket:id="oidcGroupAssigned" style="display: table-cell"/>
+          </form>
+          <div wicket:id="oidcGroupIssuer" style="display: table-cell"></div>
+          <div wicket:id="oidcGroupName" style="display: table-cell"></div>
+          <div wicket:id="oidcGroupKnownSince" style="display: table-cell"></div>
+        </div>
+      </div>
+      <div wicket:id="oidcGroupsListNavigator"/>
     </wicket:panel>
   </body>
 </html>

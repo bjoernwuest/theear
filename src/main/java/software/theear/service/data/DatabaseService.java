@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.LineNumberReader;
 import java.nio.file.Paths;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.concurrent.BlockingQueue;
@@ -17,8 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
-import jakarta.annotation.Nonnull;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +26,7 @@ import org.springframework.stereotype.Service;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.pool.HikariPool;
 
+import jakarta.annotation.Nonnull;
 import software.theear.SystemExitReasons;
 import software.theear.util.Function;
 
@@ -86,7 +86,7 @@ import software.theear.util.Function;
   private void m_RawDatabaseFitnessCheck() {
     log.debug("Check data base, eventually initialize basic structures and run migrations");
     try (Connection conn = this.m_DatabasePool.getConnection(); Statement stmt = conn.createStatement()) {
-/* EXANPLE HOW TO REGISTER EXTENSIONS      ResultSet rSet = stmt.executeQuery("SELECT extname FROM pg_extension WHERE extname = 'uuid-ossp'");
+      ResultSet rSet = stmt.executeQuery("SELECT extname FROM pg_extension WHERE extname = 'uuid-ossp'");
       if (!rSet.next()) {
         // Need to load extension
         rSet = stmt.executeQuery("SELECT name FROM pg_available_extensions WHERE name LIKE 'uuid-ossp'");
@@ -100,7 +100,7 @@ import software.theear.util.Function;
           log.error("Cannot initialize data base connection. Failed to load require 'uuid-ossp' PostgreSQL extension 'uuid-ossp'.");
           System.exit(-1); // FIXME: get error code from constant' class
         }
-      }*/
+      }
     } catch (SQLException Ex) {
       log.error("Failed to check data base. See exception for details.", Ex);
       System.exit(SystemExitReasons.CannotPrepareDatabase.ExitCode);
